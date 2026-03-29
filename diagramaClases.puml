@@ -1,0 +1,182 @@
+@startuml "Diagramita clase"
+skinparam classAttributeIconSize 0
+hide empty methods
+
+abstract class Usuario {
+  - idUsuario : int
+  - telefono : String
+  + actualizarTelefono(telefono : String) : void
+}
+
+class Cliente {
+  + solicitarReserva() : void
+}
+
+class Propietario {
+  - nombreCuenta : String
+  - contrasena : String
+  - numeroCuentaBancaria : String
+  + registrarse() : void
+  + iniciarSesion() : boolean
+  + cerrarSesion() : void
+  + darAltaCasa(casa : CasaRural) : void
+  + darBajaCasa(codigoCasa : int) : void
+  + modificarCasa(casa : CasaRural) : void
+  + crearPaqueteAlquiler(paquete : PaqueteAlquiler) : void
+  + modificarPaqueteAlquiler(paquete : PaqueteAlquiler) : void
+  + registrarPago(pago : Pago) : void
+  + anularReserva(reserva : Reserva) : void
+}
+
+class CasaRural {
+  - codigoCasa : int
+  - poblacion : String
+  - descripcionGeneral : String
+  - numComedores : int
+  - numPlazasGaraje : int
+  - activa : boolean
+  + mostrarInformacion() : void
+  + consultarDisponibilidad(fechaEntrada : Date, numeroNoches : int) : String
+  + agregarFoto(foto : Foto) : void
+  + agregarHabitacion(habitacion : Habitacion) : void
+  + agregarCocina(cocina : Cocina) : void
+  + agregarBano(bano : Bano) : void
+  + esValida() : boolean
+}
+
+class Foto {
+  - idFoto : int
+  - ruta : String
+  - descripcion : String
+  + visualizar() : void
+}
+
+class Habitacion {
+  - codigoHabitacion : String
+  - numeroCamas : int
+  - tipoCama : TipoCama
+  - tieneBano : boolean
+  + estaDisponible(fecha : Date) : boolean
+  + mostrarDatos() : void
+}
+
+class Cocina {
+  - idCocina : int
+  - tieneLavavajillas : boolean
+  - tieneLavadora : boolean
+  + mostrarDatos() : void
+}
+
+class Bano {
+  - idBano : int
+  + mostrarDatos() : void
+}
+
+class PaqueteAlquiler {
+  - idPaquete : int
+  - fechaInicio : Date
+  - fechaFin : Date
+  - modalidad : ModalidadAlquiler
+  - precioCasaEntera : double
+  - precioHabitacion : double
+  - disponible : boolean
+  + incluyeFecha(fecha : Date) : boolean
+  + permiteCasaEntera() : boolean
+  + permiteHabitaciones() : boolean
+  + calcularPrecio() : double
+  + modificar() : void
+}
+
+class Reserva {
+  - numeroReserva : int
+  - fechaReserva : Date
+  - fechaEntrada : Date
+  - numeroNoches : int
+  - tipoReserva : TipoReserva
+  - importeTotal : double
+  - importeAnticipo : double
+  - fechaLimitePago : Date
+  - estado : EstadoReserva
+  + calcularAnticipo() : double
+  + confirmar() : void
+  + cancelar() : void
+  + estaVencida() : boolean
+  + mostrarResumen() : void
+}
+
+class Pago {
+  - idPago : int
+  - fechaPago : Date
+  - monto : double
+  - estado : EstadoPago
+  + validarPago() : boolean
+  + registrar() : void
+}
+
+class SistemaReservas {
+  - propietarios : List<Propietario>
+  - casas : List<CasaRural>
+  - reservas : List<Reserva>
+  + buscarCasasPorPoblacion(poblacion : String) : List<CasaRural>
+  + buscarCasaPorCodigo(codigoCasa : int) : CasaRural
+  + consultarDisponibilidad(codigoCasa : int, fechaEntrada : Date, numeroNoches : int) : String
+  + realizarReserva(codigoCasa : int, fechaEntrada : Date, numeroNoches : int, habitaciones : List<Habitacion>) : Reserva
+  + generarNumeroReserva() : int
+  + mostrarResultadoConsulta() : void
+}
+
+enum TipoCama {
+  SENCILLA
+  DOBLE
+}
+
+enum ModalidadAlquiler {
+  CASA_ENTERA
+  POR_HABITACIONES
+  AMBAS
+}
+
+enum TipoReserva {
+  CASA_ENTERA
+  POR_HABITACIONES
+}
+
+enum EstadoReserva {
+  PENDIENTE_PAGO
+  CONFIRMADA
+  VENCIDA
+  ANULADA
+}
+
+enum EstadoPago {
+  PENDIENTE
+  VERIFICADO
+  RECHAZADO
+}
+
+Usuario <|-- Cliente
+Usuario <|-- Propietario
+
+Propietario "1" -- "0..*" CasaRural
+CasaRural "1" *-- "1..*" Foto
+CasaRural "1" *-- "3..*" Habitacion
+CasaRural "1" *-- "1..*" Cocina
+CasaRural "1" *-- "2..*" Bano
+CasaRural "1" -- "0..*" PaqueteAlquiler
+CasaRural "1" -- "0..*" Reserva
+Cliente "1" -- "0..*" Reserva
+Reserva "1" -- "0..*" Pago
+Reserva "0..*" -- "0..*" Habitacion
+
+Habitacion --> TipoCama
+PaqueteAlquiler --> ModalidadAlquiler
+Reserva --> TipoReserva
+Reserva --> EstadoReserva
+Pago --> EstadoPago
+
+SistemaReservas ..> CasaRural
+SistemaReservas ..> Reserva
+SistemaReservas ..> Propietario
+SistemaReservas ..> Cliente
+
+@enduml

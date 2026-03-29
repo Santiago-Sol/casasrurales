@@ -1,0 +1,149 @@
+@startuml "Diagramita Bases Datos"
+hide circle
+skinparam linetype ortho
+skinparam entity {
+  BackgroundColor #F8F8F8
+  BorderColor #333333
+}
+
+entity "Propietario" as Propietario {
+  * id_propietario : int
+  --
+  nombre_cuenta : varchar
+  contrasena : varchar
+  telefono : varchar
+  numero_cuenta_bancaria : varchar
+}
+
+entity "CasaRural" as CasaRural {
+  * codigo_casa : int
+  --
+  poblacion : varchar
+  descripcion_general : text
+  num_dormitorios : int
+  num_banos : int
+  num_cocinas : int
+  num_comedores : int
+  num_plazas_garaje : int
+  estado_activa : boolean
+  id_propietario : int
+}
+
+entity "Foto" as Foto {
+  * id_foto : int
+  --
+  ruta_foto : varchar
+  descripcion : varchar
+  codigo_casa : int
+}
+
+entity "Habitacion" as Habitacion {
+  * id_habitacion : int
+  --
+  codigo_habitacion : varchar
+  numero_camas : int
+  tipo_cama : varchar
+  tiene_bano : boolean
+  codigo_casa : int
+}
+
+entity "Cocina" as Cocina {
+  * id_cocina : int
+  --
+  tiene_lavavajillas : boolean
+  tiene_lavadora : boolean
+  codigo_casa : int
+}
+
+entity "Bano" as Bano {
+  * id_bano : int
+  --
+  observaciones : varchar
+  codigo_casa : int
+}
+
+entity "PaqueteAlquiler" as PaqueteAlquiler {
+  * id_paquete : int
+  --
+  fecha_inicio : date
+  fecha_fin : date
+  modalidad_alquiler : varchar
+  precio_casa_entera : decimal
+  precio_por_habitacion : decimal
+  fecha_creacion : date
+  fecha_modificacion : date
+  codigo_casa : int
+}
+
+entity "Cliente" as Cliente {
+  * id_cliente : int
+  --
+  telefono_contacto : varchar
+}
+
+entity "Reserva" as Reserva {
+  * numero_reserva : int
+  --
+  fecha_reserva : date
+  fecha_entrada : date
+  numero_noches : int
+  tipo_reserva : varchar
+  importe_total : decimal
+  importe_anticipo : decimal
+  fecha_limite_pago : date
+  estado : varchar
+  codigo_casa : int
+  id_cliente : int
+}
+
+entity "DetalleReservaHabitacion" as DetalleReservaHabitacion {
+  * id_detalle : int
+  --
+  numero_reserva : int
+  id_habitacion : int
+}
+
+entity "Pago" as Pago {
+  * id_pago : int
+  --
+  fecha_pago : date
+  monto : decimal
+  confirmado : boolean
+  numero_reserva : int
+}
+
+Propietario ||--o{ CasaRural : posee
+CasaRural ||--o{ Foto : tiene
+CasaRural ||--o{ Habitacion : contiene
+CasaRural ||--o{ Cocina : contiene
+CasaRural ||--o{ Bano : contiene
+CasaRural ||--o{ PaqueteAlquiler : define
+CasaRural ||--o{ Reserva : recibe
+Cliente ||--o{ Reserva : realiza
+Reserva ||--o{ Pago : registra
+Reserva ||--o{ DetalleReservaHabitacion : incluye
+Habitacion ||--o{ DetalleReservaHabitacion : reservada_en
+
+note right of CasaRural
+Reglas:
+- mínimo 1 cocina
+- mínimo 3 habitaciones
+- mínimo 2 baños
+end note
+
+note right of PaqueteAlquiler
+La disponibilidad se define
+explícitamente por paquetes.
+Modalidad:
+- casa_entera
+- habitaciones
+- ambas
+end note
+
+note right of Reserva
+No se permiten reservas parciales.
+El anticipo es del 20%.
+El plazo de pago es de 3 días.
+end note
+
+@enduml
