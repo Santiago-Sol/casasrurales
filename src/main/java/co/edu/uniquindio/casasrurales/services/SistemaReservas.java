@@ -17,6 +17,10 @@ import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 
+/**
+ * Servicio principal del dominio de reservas.
+ * Coordina consultas de casas, disponibilidad y creacion de reservas.
+ */
 @Service
 @Transactional
 public class SistemaReservas {

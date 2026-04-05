@@ -5,6 +5,10 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
+/**
+ * DTO que representa la informacion capturada en el registro de propietarios.
+ * Incluye los datos personales, bancarios y las validaciones del formulario.
+ */
 public class RegistroPropietarioForm {
 
     @NotBlank(message = "El nombre de cuenta es obligatorio")

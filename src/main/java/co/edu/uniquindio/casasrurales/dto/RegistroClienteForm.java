@@ -5,6 +5,10 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
+/**
+ * DTO que transporta los datos del formulario de registro de clientes.
+ * Tambien concentra las validaciones basicas del lado del servidor.
+ */
 public class RegistroClienteForm {
 
     @NotBlank(message = "El correo es obligatorio")

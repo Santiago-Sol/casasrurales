@@ -12,6 +12,10 @@ import jakarta.persistence.Transient;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Entidad que representa al usuario propietario de una o varias casas rurales.
+ * Conserva sus datos de gestion y la relacion con las casas publicadas.
+ */
 @Entity
 @Table(name = "propietario")
 @AttributeOverrides({

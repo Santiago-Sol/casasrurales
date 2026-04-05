@@ -16,6 +16,10 @@ import jakarta.persistence.TemporalType;
 
 import java.util.Date;
 
+/**
+ * Entidad que registra un pago realizado para una reserva.
+ * Permite controlar monto, fecha y estado del proceso de validacion.
+ */
 @Entity
 @Table(name = "pago")
 public class Pago {

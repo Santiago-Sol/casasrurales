@@ -6,6 +6,10 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.MappedSuperclass;
 
+/**
+ * Clase base para los usuarios del dominio.
+ * Define los atributos comunes compartidos por clientes y propietarios.
+ */
 @MappedSuperclass
 public abstract class Usuario {
 

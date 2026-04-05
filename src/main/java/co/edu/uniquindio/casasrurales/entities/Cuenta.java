@@ -13,6 +13,10 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 
+/**
+ * Entidad de autenticacion que almacena credenciales y rol de acceso.
+ * Vincula una cuenta del sistema con un cliente o con un propietario.
+ */
 @Entity
 @Table(name = "cuenta")
 public class Cuenta {

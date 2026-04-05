@@ -5,6 +5,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
 
+/**
+ * Repositorio JPA para cuentas de acceso y autenticacion.
+ */
 public interface CuentaRepository extends JpaRepository<Cuenta, Long> {
 
     Optional<Cuenta> findByEmail(String email);

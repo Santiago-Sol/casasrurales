@@ -11,6 +11,10 @@ import jakarta.persistence.Table;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Entidad que representa a un usuario con rol de cliente.
+ * Mantiene la relacion con las reservas realizadas dentro de la plataforma.
+ */
 @Entity
 @Table(name = "cliente")
 @AttributeOverrides({

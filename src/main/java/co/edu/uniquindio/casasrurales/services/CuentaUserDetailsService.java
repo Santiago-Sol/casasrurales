@@ -11,6 +11,10 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+/**
+ * Adaptador entre la entidad {@code Cuenta} y Spring Security.
+ * Carga usuarios por correo y construye sus permisos segun el rol almacenado.
+ */
 @Service
 public class CuentaUserDetailsService implements UserDetailsService {
 

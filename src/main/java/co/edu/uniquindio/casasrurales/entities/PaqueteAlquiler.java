@@ -18,6 +18,10 @@ import jakarta.persistence.TemporalType;
 
 import java.util.Date;
 
+/**
+ * Entidad que define una oferta de alquiler para una casa rural en un rango de fechas.
+ * Incluye modalidad, precio y reglas temporales de disponibilidad.
+ */
 @Entity
 @Table(name = "paquete_alquiler")
 public class PaqueteAlquiler {

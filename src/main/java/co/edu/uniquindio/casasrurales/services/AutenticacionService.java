@@ -11,6 +11,10 @@ import jakarta.transaction.Transactional;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+/**
+ * Servicio de aplicacion encargado del registro de usuarios y creacion de cuentas.
+ * Centraliza la validacion del correo y el cifrado de contrasenas.
+ */
 @Service
 @Transactional
 public class AutenticacionService {

@@ -8,6 +8,11 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 
+/**
+ * Configura las reglas de seguridad de la aplicacion.
+ * Define que rutas son publicas, que roles pueden acceder al dashboard
+ * y el codificador de contrasenas usado por Spring Security.
+ */
 @Configuration
 public class SecurityConfig {
 

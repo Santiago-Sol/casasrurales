@@ -26,6 +26,10 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 
+/**
+ * Entidad que representa una reserva creada por un cliente sobre una casa rural.
+ * Centraliza fechas, estado, tipo de reserva, habitaciones involucradas y pagos.
+ */
 @Entity
 @Table(name = "reserva")
 public class Reserva {

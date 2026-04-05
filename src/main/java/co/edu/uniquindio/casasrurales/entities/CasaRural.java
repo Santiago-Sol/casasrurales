@@ -17,6 +17,10 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 
+/**
+ * Entidad principal del dominio que representa una casa rural publicada en el sistema.
+ * Agrupa su informacion general, propietario, espacios, paquetes y reservas asociadas.
+ */
 @Entity
 @Table(name = "casa_rural")
 public class CasaRural {

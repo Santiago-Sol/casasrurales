@@ -7,6 +7,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Date;
 import java.util.List;
 
+/**
+ * Repositorio JPA para paquetes de alquiler vigentes o historicos.
+ */
 public interface PaqueteAlquilerRepository extends JpaRepository<PaqueteAlquiler, Integer> {
 
     List<PaqueteAlquiler> findByCasaRuralCodigoCasa(int codigoCasa);

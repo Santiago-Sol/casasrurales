@@ -19,6 +19,10 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 
+/**
+ * Entidad que modela una habitacion disponible dentro de una casa rural.
+ * Se usa tanto para describir sus caracteristicas como para relacionarla con reservas.
+ */
 @Entity
 @Table(name = "habitacion")
 public class Habitacion {

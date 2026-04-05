@@ -9,6 +9,10 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
+/**
+ * Entidad que modela un bano perteneciente a una casa rural.
+ * Se usa para llevar el conteo y la informacion complementaria de este espacio.
+ */
 @Entity
 @Table(name = "bano")
 public class Bano {

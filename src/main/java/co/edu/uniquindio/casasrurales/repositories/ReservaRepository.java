@@ -7,6 +7,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Date;
 import java.util.List;
 
+/**
+ * Repositorio JPA para consultas de reservas por casa, cliente, estado o fechas.
+ */
 public interface ReservaRepository extends JpaRepository<Reserva, Integer> {
 
     List<Reserva> findByCasaRuralCodigoCasa(int codigoCasa);

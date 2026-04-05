@@ -13,6 +13,10 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 
+/**
+ * Controlador web encargado del flujo de autenticacion y registro.
+ * Atiende las vistas de login, registro y redireccion al dashboard segun el rol.
+ */
 @Controller
 @RequestMapping
 public class AuthController {

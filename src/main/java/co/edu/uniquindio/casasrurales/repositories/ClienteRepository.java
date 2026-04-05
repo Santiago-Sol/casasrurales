@@ -5,6 +5,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
 
+/**
+ * Repositorio JPA para la gestion de clientes.
+ */
 public interface ClienteRepository extends JpaRepository<Cliente, Integer> {
 
     Optional<Cliente> findByTelefono(String telefono);

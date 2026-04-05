@@ -9,6 +9,10 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
+/**
+ * Entidad que describe una cocina registrada para una casa rural.
+ * Permite modelar caracteristicas basicas de equipamiento.
+ */
 @Entity
 @Table(name = "cocina")
 public class Cocina {

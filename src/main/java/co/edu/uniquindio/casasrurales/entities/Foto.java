@@ -9,6 +9,10 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
+/**
+ * Entidad que representa una fotografia asociada a una casa rural.
+ * Guarda la ruta del archivo y una descripcion opcional.
+ */
 @Entity
 @Table(name = "foto")
 public class Foto {
