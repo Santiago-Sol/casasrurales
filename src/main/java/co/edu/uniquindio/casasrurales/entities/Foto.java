@@ -31,8 +31,7 @@ public class Foto {
     protected Foto() {
     }
 
-    public Foto(int idFoto, String ruta, String descripcion) {
-        this.idFoto = idFoto;
+    public Foto(String ruta, String descripcion) {
         this.ruta = ruta;
         this.descripcion = descripcion;
     }

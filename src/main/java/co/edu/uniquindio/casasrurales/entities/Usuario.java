@@ -19,8 +19,7 @@ public abstract class Usuario {
     protected Usuario() {
     }
 
-    public Usuario(int idUsuario, String telefono) {
-        this.idUsuario = idUsuario;
+    public Usuario(String telefono) {
         this.telefono = telefono;
     }
 

@@ -63,9 +63,8 @@ public class PaqueteAlquiler {
     protected PaqueteAlquiler() {
     }
 
-    public PaqueteAlquiler(int idPaquete, Date fechaInicio, Date fechaFin, ModalidadAlquiler modalidad,
+    public PaqueteAlquiler(Date fechaInicio, Date fechaFin, ModalidadAlquiler modalidad,
                            double precioCasaEntera, double precioHabitacion, boolean disponible) {
-        this.idPaquete = idPaquete;
         this.fechaInicio = fechaInicio;
         this.fechaFin = fechaFin;
         this.modalidad = modalidad;

@@ -28,8 +28,8 @@ public class Bano {
     protected Bano() {
     }
 
-    public Bano(int idBano) {
-        this.idBano = idBano;
+    public Bano(String observaciones) {
+        this.observaciones = observaciones;
     }
 
     public int getIdBano() {

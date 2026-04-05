@@ -86,20 +86,14 @@ public class Reserva {
     protected Reserva() {
     }
 
-    public Reserva(int numeroReserva, Date fechaReserva, Date fechaEntrada, int numeroNoches, TipoReserva tipoReserva,
+    public Reserva(Date fechaEntrada, int numeroNoches, TipoReserva tipoReserva,
                    double importeTotal, EstadoReserva estado, Cliente cliente, CasaRural casaRural,
                    List<Habitacion> habitaciones) {
-        this.numeroReserva = numeroReserva;
-        this.fechaReserva = fechaReserva;
         this.fechaEntrada = fechaEntrada;
         this.numeroNoches = numeroNoches;
         this.tipoReserva = tipoReserva;
         this.importeTotal = importeTotal;
         this.importeAnticipo = calcularAnticipo();
-        Calendar calendar = Calendar.getInstance();
-        calendar.setTime(fechaReserva);
-        calendar.add(Calendar.DAY_OF_MONTH, 3);
-        this.fechaLimitePago = calendar.getTime();
         this.estado = estado;
         this.cliente = cliente;
         this.casaRural = casaRural;

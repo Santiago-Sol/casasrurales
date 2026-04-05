@@ -3,7 +3,7 @@
   <groupId>co.edu.uniquindio</groupId>
   <artifactId>casasrurales</artifactId>
   <versioning>
-    <lastUpdated>20260405030523</lastUpdated>
+    <lastUpdated>20260405033845</lastUpdated>
     <snapshot>
       <localCopy>true</localCopy>
     </snapshot>
@@ -11,12 +11,12 @@
       <snapshotVersion>
         <extension>pom</extension>
         <value>0.0.1-SNAPSHOT</value>
-        <updated>20260405030523</updated>
+        <updated>20260405033845</updated>
       </snapshotVersion>
       <snapshotVersion>
         <extension>jar</extension>
         <value>0.0.1-SNAPSHOT</value>
-        <updated>20260405030523</updated>
+        <updated>20260405033845</updated>
       </snapshotVersion>
     </snapshotVersions>
   </versioning>

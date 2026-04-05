@@ -25,8 +25,8 @@ public class Cliente extends Usuario {
     protected Cliente() {
     }
 
-    public Cliente(int idUsuario, String telefono) {
-        super(idUsuario, telefono);
+    public Cliente(String telefono) {
+        super(telefono);
     }
 
     public List<Reserva> getReservas() {

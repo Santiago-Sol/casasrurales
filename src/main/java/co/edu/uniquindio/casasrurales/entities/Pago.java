@@ -33,7 +33,7 @@ public class Pago {
     private double monto;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "confirmado", nullable = false, length = 30)
+    @Column(name = "estado", nullable = false, length = 30)
     private EstadoPago estado;
 
     @ManyToOne
@@ -43,8 +43,7 @@ public class Pago {
     protected Pago() {
     }
 
-    public Pago(int idPago, Date fechaPago, double monto, EstadoPago estado) {
-        this.idPago = idPago;
+    public Pago(Date fechaPago, double monto, EstadoPago estado) {
         this.fechaPago = fechaPago;
         this.monto = monto;
         this.estado = estado;

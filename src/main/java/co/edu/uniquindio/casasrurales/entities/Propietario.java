@@ -11,7 +11,6 @@ import jakarta.persistence.Transient;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 @Entity
 @Table(name = "propietario")
@@ -36,17 +35,11 @@ public class Propietario extends Usuario {
     @OneToMany(mappedBy = "propietario", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<CasaRural> casas = new ArrayList<>();
 
-    @Transient
-    private List<PaqueteAlquiler> paquetesAlquiler = new ArrayList<>();
-
-    @Transient
-    private List<Pago> pagos = new ArrayList<>();
-
     protected Propietario() {
     }
 
-    public Propietario(int idUsuario, String telefono, String nombreCuenta, String contrasena, String numeroCuentaBancaria) {
-        super(idUsuario, telefono);
+    public Propietario(String telefono, String nombreCuenta, String contrasena, String numeroCuentaBancaria) {
+        super(telefono);
         this.nombreCuenta = nombreCuenta;
         this.contrasena = contrasena;
         this.numeroCuentaBancaria = numeroCuentaBancaria;
@@ -109,23 +102,6 @@ public class Propietario extends Usuario {
     public void modificarCasa(CasaRural casa) {
         darBajaCasa(casa.getCodigoCasa());
         darAltaCasa(casa);
-    }
-
-    public void crearPaqueteAlquiler(PaqueteAlquiler paquete) {
-        paquetesAlquiler.add(paquete);
-    }
-
-    public void modificarPaqueteAlquiler(PaqueteAlquiler paquete) {
-        Optional<PaqueteAlquiler> actual = paquetesAlquiler.stream()
-                .filter(item -> item.getIdPaquete() == paquete.getIdPaquete())
-                .findFirst();
-
-        actual.ifPresent(paquetesAlquiler::remove);
-        paquetesAlquiler.add(paquete);
-    }
-
-    public void registrarPago(Pago pago) {
-        pagos.add(pago);
     }
 
     public void anularReserva(Reserva reserva) {

@@ -1,51 +1,60 @@
 package co.edu.uniquindio.casasrurales.services;
 
 import co.edu.uniquindio.casasrurales.entities.CasaRural;
+import co.edu.uniquindio.casasrurales.entities.Cliente;
 import co.edu.uniquindio.casasrurales.entities.Habitacion;
 import co.edu.uniquindio.casasrurales.entities.Propietario;
 import co.edu.uniquindio.casasrurales.entities.Reserva;
 import co.edu.uniquindio.casasrurales.enums.EstadoReserva;
 import co.edu.uniquindio.casasrurales.enums.TipoReserva;
+import co.edu.uniquindio.casasrurales.repositories.CasaRuralRepository;
+import co.edu.uniquindio.casasrurales.repositories.PropietarioRepository;
+import co.edu.uniquindio.casasrurales.repositories.ReservaRepository;
+import jakarta.transaction.Transactional;
+import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 
+@Service
+@Transactional
 public class SistemaReservas {
 
-    private final List<Propietario> propietarios = new ArrayList<>();
-    private final List<CasaRural> casas = new ArrayList<>();
-    private final List<Reserva> reservas = new ArrayList<>();
+    private final PropietarioRepository propietarioRepository;
+    private final CasaRuralRepository casaRuralRepository;
+    private final ReservaRepository reservaRepository;
+
+    public SistemaReservas(PropietarioRepository propietarioRepository,
+                           CasaRuralRepository casaRuralRepository,
+                           ReservaRepository reservaRepository) {
+        this.propietarioRepository = propietarioRepository;
+        this.casaRuralRepository = casaRuralRepository;
+        this.reservaRepository = reservaRepository;
+    }
 
     public List<Propietario> getPropietarios() {
-        return List.copyOf(propietarios);
+        return propietarioRepository.findAll();
     }
 
     public List<CasaRural> getCasas() {
-        return List.copyOf(casas);
+        return casaRuralRepository.findAll();
     }
 
     public List<Reserva> getReservas() {
-        return List.copyOf(reservas);
+        return reservaRepository.findAll();
     }
 
     public void agregarPropietario(Propietario propietario) {
-        propietarios.add(propietario);
-        casas.addAll(propietario.getCasas());
+        propietarioRepository.save(propietario);
     }
 
     public List<CasaRural> buscarCasasPorPoblacion(String poblacion) {
-        return casas.stream()
-                .filter(casa -> casa.getPoblacion().equalsIgnoreCase(poblacion))
-                .toList();
+        return casaRuralRepository.findByPoblacionIgnoreCase(poblacion);
     }
 
     public CasaRural buscarCasaPorCodigo(int codigoCasa) {
-        return casas.stream()
-                .filter(casa -> casa.getCodigoCasa() == codigoCasa)
-                .findFirst()
-                .orElse(null);
+        return casaRuralRepository.findById(codigoCasa).orElse(null);
     }
 
     public String consultarDisponibilidad(int codigoCasa, Date fechaEntrada, int numeroNoches) {
@@ -68,8 +77,6 @@ public class SistemaReservas {
                 : TipoReserva.POR_HABITACIONES;
 
         Reserva reserva = new Reserva(
-                generarNumeroReserva(),
-                new Date(),
                 fechaEntrada,
                 numeroNoches,
                 tipoReserva,
@@ -80,19 +87,50 @@ public class SistemaReservas {
                 habitaciones
         );
 
-        reservas.add(reserva);
         casa.agregarReserva(reserva);
         if (habitaciones != null) {
             habitaciones.forEach(habitacion -> habitacion.agregarReserva(reserva));
         }
-        return reserva;
+
+        return reservaRepository.save(reserva);
     }
 
-    public int generarNumeroReserva() {
-        return reservas.size() + 1;
+    public Reserva realizarReserva(int codigoCasa, Cliente cliente, Date fechaEntrada, int numeroNoches,
+                                   List<Habitacion> habitaciones, double importeTotal) {
+        CasaRural casa = Objects.requireNonNull(buscarCasaPorCodigo(codigoCasa), "La casa no existe");
+        String disponibilidad = casa.consultarDisponibilidad(fechaEntrada, numeroNoches);
+        if (!"LIBRE".equals(disponibilidad)) {
+            throw new IllegalStateException("La casa no esta disponible");
+        }
+
+        TipoReserva tipoReserva = (habitaciones == null || habitaciones.isEmpty())
+                ? TipoReserva.CASA_ENTERA
+                : TipoReserva.POR_HABITACIONES;
+
+        Reserva reserva = new Reserva(
+                fechaEntrada,
+                numeroNoches,
+                tipoReserva,
+                importeTotal,
+                EstadoReserva.PENDIENTE_PAGO,
+                cliente,
+                casa,
+                habitaciones
+        );
+
+        casa.agregarReserva(reserva);
+        if (cliente != null) {
+            cliente.agregarReserva(reserva);
+        }
+        if (habitaciones != null) {
+            habitaciones.forEach(habitacion -> habitacion.agregarReserva(reserva));
+        }
+
+        return reservaRepository.save(reserva);
     }
 
     public String mostrarResultadoConsulta() {
-        return "Casas registradas: %d, reservas activas: %d".formatted(casas.size(), reservas.size());
+        return "Casas registradas: %d, reservas activas: %d"
+                .formatted(casaRuralRepository.count(), reservaRepository.count());
     }
 }

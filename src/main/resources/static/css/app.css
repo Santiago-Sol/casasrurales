@@ -1,0 +1,143 @@
+:root {
+    --bg: #f5efe4;
+    --surface: #fffdf8;
+    --ink: #1f2a1f;
+    --muted: #5d6b5d;
+    --accent: #2f6f57;
+    --accent-soft: #dce9e2;
+    --danger: #a33a2b;
+    --danger-soft: #f8dfdb;
+    --success: #2f6f57;
+    --success-soft: #dce9e2;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: Georgia, "Times New Roman", serif;
+    color: var(--ink);
+    background:
+            radial-gradient(circle at top right, #efe0c7 0, transparent 28%),
+            linear-gradient(135deg, #f8f2e9, #efe6d8);
+    min-height: 100vh;
+}
+
+a {
+    color: var(--accent);
+}
+
+.landing,
+.page-shell {
+    display: grid;
+    place-items: center;
+    padding: 32px 16px;
+}
+
+.hero,
+.form-card,
+.dashboard-card {
+    width: min(100%, 720px);
+}
+
+.card,
+.form-card,
+.dashboard-card {
+    background: rgba(255, 253, 248, 0.95);
+    border-radius: 24px;
+    padding: 32px;
+    box-shadow: 0 18px 50px rgba(49, 48, 34, 0.12);
+    border: 1px solid rgba(47, 111, 87, 0.14);
+}
+
+.eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--muted);
+    font-size: 0.75rem;
+}
+
+h1 {
+    margin: 0 0 16px;
+    font-size: clamp(2rem, 4vw, 3.5rem);
+    line-height: 1.05;
+}
+
+.lead,
+.subtle {
+    color: var(--muted);
+}
+
+.actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin: 24px 0 16px;
+}
+
+form {
+    display: grid;
+    gap: 12px;
+}
+
+label {
+    font-weight: 600;
+}
+
+input {
+    border: 1px solid #cfd8cb;
+    border-radius: 12px;
+    padding: 12px 14px;
+    font-size: 1rem;
+    background: #fff;
+}
+
+.button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 999px;
+    padding: 12px 20px;
+    font-size: 1rem;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.button.primary {
+    background: var(--accent);
+    color: #fff;
+}
+
+.button.secondary {
+    background: var(--accent-soft);
+    color: var(--ink);
+}
+
+.alert,
+.field-error {
+    border-radius: 12px;
+    padding: 10px 12px;
+    font-size: 0.95rem;
+}
+
+.alert.error,
+.field-error {
+    background: var(--danger-soft);
+    color: var(--danger);
+}
+
+.alert.success {
+    background: var(--success-soft);
+    color: var(--success);
+}
+
+@media (max-width: 640px) {
+    .card,
+    .form-card,
+    .dashboard-card {
+        padding: 24px;
+    }
+}

@@ -31,8 +31,7 @@ public class Cocina {
     protected Cocina() {
     }
 
-    public Cocina(int idCocina, boolean tieneLavavajillas, boolean tieneLavadora) {
-        this.idCocina = idCocina;
+    public Cocina(boolean tieneLavavajillas, boolean tieneLavadora) {
         this.tieneLavavajillas = tieneLavavajillas;
         this.tieneLavadora = tieneLavadora;
     }
