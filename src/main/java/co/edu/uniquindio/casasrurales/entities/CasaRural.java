@@ -2,26 +2,77 @@ package co.edu.uniquindio.casasrurales.entities;
 
 import co.edu.uniquindio.casasrurales.enums.EstadoDisponibilidad;
 import co.edu.uniquindio.casasrurales.enums.EstadoReserva;
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 
+@Entity
+@Table(name = "casa_rural")
 public class CasaRural {
 
+    @Id
+    @Column(name = "codigo_casa")
     private int codigoCasa;
+
+    @Column(nullable = false, length = 120)
     private String poblacion;
+
+    @Column(name = "descripcion_general", columnDefinition = "TEXT")
     private String descripcionGeneral;
+
+    @Column(name = "num_dormitorios")
+    private int numDormitorios;
+
+    @Column(name = "num_banos")
+    private int numBanos;
+
+    @Column(name = "num_cocinas")
+    private int numCocinas;
+
+    @Column(name = "num_comedores")
     private int numComedores;
+
+    @Column(name = "num_plazas_garaje")
     private int numPlazasGaraje;
+
+    @Column(name = "estado_activa")
     private boolean activa;
-    private final List<Foto> fotos = new ArrayList<>();
-    private final List<Habitacion> habitaciones = new ArrayList<>();
-    private final List<Cocina> cocinas = new ArrayList<>();
-    private final List<Bano> banos = new ArrayList<>();
-    private final List<PaqueteAlquiler> paquetesAlquiler = new ArrayList<>();
-    private final List<Reserva> reservas = new ArrayList<>();
+
+    @ManyToOne
+    @JoinColumn(name = "id_propietario", nullable = false)
+    private Propietario propietario;
+
+    @OneToMany(mappedBy = "casaRural", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Foto> fotos = new ArrayList<>();
+
+    @OneToMany(mappedBy = "casaRural", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Habitacion> habitaciones = new ArrayList<>();
+
+    @OneToMany(mappedBy = "casaRural", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Cocina> cocinas = new ArrayList<>();
+
+    @OneToMany(mappedBy = "casaRural", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Bano> banos = new ArrayList<>();
+
+    @OneToMany(mappedBy = "casaRural", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<PaqueteAlquiler> paquetesAlquiler = new ArrayList<>();
+
+    @OneToMany(mappedBy = "casaRural", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Reserva> reservas = new ArrayList<>();
+
+    protected CasaRural() {
+    }
 
     public CasaRural(int codigoCasa, String poblacion, String descripcionGeneral, int numComedores,
                      int numPlazasGaraje, boolean activa) {
@@ -55,6 +106,14 @@ public class CasaRural {
 
     public boolean isActiva() {
         return activa;
+    }
+
+    public Propietario getPropietario() {
+        return propietario;
+    }
+
+    public void setPropietario(Propietario propietario) {
+        this.propietario = propietario;
     }
 
     public List<Foto> getFotos() {
@@ -113,26 +172,35 @@ public class CasaRural {
     }
 
     public void agregarFoto(Foto foto) {
+        foto.setCasaRural(this);
         fotos.add(foto);
     }
 
     public void agregarHabitacion(Habitacion habitacion) {
+        habitacion.setCasaRural(this);
         habitaciones.add(habitacion);
+        numDormitorios = habitaciones.size();
     }
 
     public void agregarCocina(Cocina cocina) {
+        cocina.setCasaRural(this);
         cocinas.add(cocina);
+        numCocinas = cocinas.size();
     }
 
     public void agregarBano(Bano bano) {
+        bano.setCasaRural(this);
         banos.add(bano);
+        numBanos = banos.size();
     }
 
     public void agregarPaqueteAlquiler(PaqueteAlquiler paqueteAlquiler) {
+        paqueteAlquiler.setCasaRural(this);
         paquetesAlquiler.add(paqueteAlquiler);
     }
 
     public void agregarReserva(Reserva reserva) {
+        reserva.setCasaRural(this);
         reservas.add(reserva);
     }
 

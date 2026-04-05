@@ -1,9 +1,23 @@
 package co.edu.uniquindio.casasrurales.entities;
 
+import jakarta.persistence.Column;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.MappedSuperclass;
+
+@MappedSuperclass
 public abstract class Usuario {
 
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int idUsuario;
+
+    @Column(nullable = false, length = 30)
     private String telefono;
+
+    protected Usuario() {
+    }
 
     public Usuario(int idUsuario, String telefono) {
         this.idUsuario = idUsuario;
