@@ -11,5 +11,5 @@ import co.edu.uniquindio.casasrurales.entities.Cocina;
  */
 public interface CocinaRepository extends JpaRepository<Cocina, Integer> {
 
-    List<Cocina> findByCodigoCasa(int codigoCasa);
+    List<Cocina> findByCasaRuralCodigoCasa(int codigoCasa);
 }

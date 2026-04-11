@@ -11,5 +11,5 @@ import co.edu.uniquindio.casasrurales.entities.Bano;
  */
 public interface BanoRepository extends JpaRepository<Bano, Integer> {
 
-    List<Bano> findByCodigoCasa(int codigoCasa);
+    List<Bano> findByCasaRuralCodigoCasa(int codigoCasa);
 }

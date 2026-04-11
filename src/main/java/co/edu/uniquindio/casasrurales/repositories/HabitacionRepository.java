@@ -14,7 +14,5 @@ public interface HabitacionRepository extends JpaRepository<Habitacion, Integer>
 
     List<Habitacion> findByCasaRuralCodigoCasa(int codigoCasa);
 
-    List<Habitacion> findByCodigoCasa(int codigoCasa);
-
     Optional<Habitacion> findByCodigoHabitacion(String codigoHabitacion);
 }
