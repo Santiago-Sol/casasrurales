@@ -26,7 +26,7 @@ public class RegistroPropietarioForm {
     private String numeroCuentaBancaria;
 
     @NotBlank(message = "La contrasena es obligatoria")
-    @Size(min = 6, message = "La contrasena debe tener al menos 6 caracteres")
+    @Size(min = 8, message = "La contrasena debe tener al menos 8 caracteres")
     private String password;
 
     public String getNombreCuenta() {

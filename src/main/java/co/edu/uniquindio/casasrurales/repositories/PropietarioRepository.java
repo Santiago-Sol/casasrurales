@@ -1,9 +1,10 @@
 package co.edu.uniquindio.casasrurales.repositories;
 
-import co.edu.uniquindio.casasrurales.entities.Propietario;
+import java.util.Optional;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import java.util.Optional;
+import co.edu.uniquindio.casasrurales.entities.Propietario;
 
 /**
  * Repositorio JPA para la administracion de propietarios.
@@ -11,4 +12,6 @@ import java.util.Optional;
 public interface PropietarioRepository extends JpaRepository<Propietario, Integer> {
 
     Optional<Propietario> findByNombreCuenta(String nombreCuenta);
+
+    boolean existsByNombreCuenta(String nombreCuenta);
 }
