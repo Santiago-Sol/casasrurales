@@ -23,6 +23,7 @@ public class SecurityConfig {
                         .requestMatchers("/", "/registro/**", "/css/**").permitAll()
                         .requestMatchers("/dashboard/propietario").hasRole("PROPIETARIO")
                         .requestMatchers("/dashboard/cliente").hasRole("CLIENTE")
+                        .requestMatchers("/busqueda/**").hasRole("CLIENTE")
                         .anyRequest().authenticated()
                 )
                 .formLogin(login -> login
