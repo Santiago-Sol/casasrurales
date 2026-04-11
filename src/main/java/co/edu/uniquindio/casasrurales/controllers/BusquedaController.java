@@ -56,17 +56,18 @@ public class BusquedaController {
             return "busqueda/formulario-busqueda";
         }
 
-        List<CasaRuralListadoDTO> casas = busquedaCasasService.buscarCasasPorPoblacion(poblacion);
+        String poblacionNormalizada = poblacion.trim();
+        List<CasaRuralListadoDTO> casas = busquedaCasasService.buscarCasasPorPoblacion(poblacionNormalizada);
 
         if (casas.isEmpty()) {
-            model.addAttribute("mensaje", "No se encontraron casas disponibles en " + poblacion + 
+            model.addAttribute("mensaje", "No se encontraron casas disponibles en " + poblacionNormalizada + 
                     ". Por favor, intenta con otra población.");
-            model.addAttribute("poblacionBuscada", poblacion);
+            model.addAttribute("poblacionBuscada", poblacionNormalizada);
             return "busqueda/formulario-busqueda";
         }
 
         model.addAttribute("casas", casas);
-        model.addAttribute("poblacionBuscada", poblacion);
+        model.addAttribute("poblacionBuscada", poblacionNormalizada);
         model.addAttribute("cantidadResultados", casas.size());
         
         return "busqueda/resultados-busqueda";

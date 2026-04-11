@@ -1,21 +1,34 @@
 package co.edu.uniquindio.casasrurales.services;
 
-import co.edu.uniquindio.casasrurales.dto.CasaRuralDetalleDTO;
-import co.edu.uniquindio.casasrurales.dto.CasaRuralListadoDTO;
-import co.edu.uniquindio.casasrurales.repositories.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import static org.mockito.ArgumentMatchers.anyString;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.*;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import co.edu.uniquindio.casasrurales.dto.CasaRuralDetalleDTO;
+import co.edu.uniquindio.casasrurales.dto.CasaRuralListadoDTO;
+import co.edu.uniquindio.casasrurales.repositories.BanoRepository;
+import co.edu.uniquindio.casasrurales.repositories.CasaRuralRepository;
+import co.edu.uniquindio.casasrurales.repositories.CocinaRepository;
+import co.edu.uniquindio.casasrurales.repositories.FotoRepository;
+import co.edu.uniquindio.casasrurales.repositories.HabitacionRepository;
+import co.edu.uniquindio.casasrurales.repositories.PaqueteAlquilerRepository;
 
 /**
  * Pruebas unitarias del servicio de búsqueda de casas rurales.
@@ -55,7 +68,7 @@ class BusquedaCasasServiceTest {
     @Test
     void testBuscarCasasPorPoblacionConPaqueteActivo() {
         // Arrange
-        when(casaRuralRepository.findByPoblacionIgnoreCase("salento"))
+        when(casaRuralRepository.findByPoblacionIgnoreCase(anyString()))
                 .thenReturn(new ArrayList<>()); // Simulamos que la búsqueda retorna una lista vacía
 
         // Act
