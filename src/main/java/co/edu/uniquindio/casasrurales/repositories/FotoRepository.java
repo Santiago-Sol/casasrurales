@@ -12,6 +12,4 @@ import co.edu.uniquindio.casasrurales.entities.Foto;
 public interface FotoRepository extends JpaRepository<Foto, Integer> {
 
     List<Foto> findByCasaRuralCodigoCasa(int codigoCasa);
-
-    List<Foto> findByCodigoCasa(int codigoCasa);
 }

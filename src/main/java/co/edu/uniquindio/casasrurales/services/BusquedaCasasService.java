@@ -171,7 +171,7 @@ public class BusquedaCasasService {
         );
 
         // Obtener habitaciones
-        List<Habitacion> habitaciones = habitacionRepository.findByCodigoCasa(casa.getCodigoCasa());
+        List<Habitacion> habitaciones = habitacionRepository.findByCasaRuralCodigoCasa(casa.getCodigoCasa());
         List<HabitacionDetalleDTO> habitacionesDTO = habitaciones.stream()
                 .map(h -> new HabitacionDetalleDTO(
                         h.getCodigoHabitacion(),
@@ -183,21 +183,21 @@ public class BusquedaCasasService {
         detalle.setHabitaciones(habitacionesDTO);
 
         // Obtener cocinas
-        List<Cocina> cocinas = cocinaRepository.findByCodigoCasa(casa.getCodigoCasa());
+        List<Cocina> cocinas = cocinaRepository.findByCasaRuralCodigoCasa(casa.getCodigoCasa());
         List<CocinaDetalleDTO> cocinasDTO = cocinas.stream()
                 .map(c -> new CocinaDetalleDTO(c.isTieneLavavajillas(), c.isTieneLavadora()))
                 .collect(Collectors.toList());
         detalle.setCocinas(cocinasDTO);
 
         // Obtener baños
-        List<Bano> banos = banoRepository.findByCodigoCasa(casa.getCodigoCasa());
+        List<Bano> banos = banoRepository.findByCasaRuralCodigoCasa(casa.getCodigoCasa());
         List<BanoDetalleDTO> banosDTO = banos.stream()
                 .map(b -> new BanoDetalleDTO(b.getObservaciones()))
                 .collect(Collectors.toList());
         detalle.setBanos(banosDTO);
 
         // Obtener fotos
-        List<Foto> fotos = fotoRepository.findByCodigoCasa(casa.getCodigoCasa());
+        List<Foto> fotos = fotoRepository.findByCasaRuralCodigoCasa(casa.getCodigoCasa());
         List<String> urlsFotos = fotos.stream()
                 .map(Foto::getRuta)
                 .collect(Collectors.toList());

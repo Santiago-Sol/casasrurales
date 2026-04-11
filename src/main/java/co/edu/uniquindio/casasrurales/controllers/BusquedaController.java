@@ -96,6 +96,42 @@ public class BusquedaController {
     }
 
     /**
+     * Busca una casa por código usando parámetro query (desde formulario).
+     * Redirige a la vista de detalle si la casa existe y está disponible.
+     * Endpoint dedicado para búsqueda por código desde el formulario mejorado.
+     * 
+     * @param codigo el código de la casa (formato: CR-001, CR-002, etc.)
+     * @param model para pasar datos a la vista
+     * @return redirección a detalle o formulario con error
+     */
+    @GetMapping("/detalle-por-codigo")
+    public String buscarDetallePorCodigo(@RequestParam(required = false) String codigo, Model model) {
+        if (codigo == null || codigo.trim().isEmpty()) {
+            model.addAttribute("mensaje", "Por favor, ingresa un código de casa para buscar");
+            return "busqueda/formulario-busqueda";
+        }
+
+        try {
+            // Intentar parsear el código como número (CasaRural usa int como ID)
+            int codigoCasa = Integer.parseInt(codigo.trim());
+            Optional<CasaRuralDetalleDTO> casaOpt = busquedaCasasService.buscarCasaPorCodigo(codigoCasa);
+
+            if (casaOpt.isEmpty()) {
+                model.addAttribute("mensaje", "No se encontró la casa con código " + codigo + 
+                        " o no está disponible para consultar.");
+                return "busqueda/formulario-busqueda";
+            }
+
+            model.addAttribute("casa", casaOpt.get());
+            return "busqueda/detalle-casa";
+        } catch (NumberFormatException e) {
+            model.addAttribute("mensaje", "El código ingresado no es válido. Por favor, usa un formato numérico.");
+            model.addAttribute("codigoBuscado", codigo);
+            return "busqueda/formulario-busqueda";
+        }
+    }
+
+    /**
      * Muestra todos los detalles de una casa rural específica.
      * Incluye: fotos, habitaciones, cocinas, baños y datos del propietario.
      * 
