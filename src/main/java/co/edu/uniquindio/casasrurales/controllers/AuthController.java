@@ -82,10 +82,12 @@ public class AuthController {
         boolean esPropietario = authentication.getAuthorities().stream()
                 .anyMatch(authority -> authority.getAuthority().equals("ROLE_PROPIETARIO"));
 
-        return ResponseEntity.ok(Map.of(
+        Map<String, Object> respuesta = Map.of(
                 "usuario", authentication.getName(),
                 "rol", esPropietario ? "PROPIETARIO" : "CLIENTE",
                 "autenticado", true
-        ));
+        );
+        
+        return ResponseEntity.ok(respuesta);
     }
 }
