@@ -1,24 +1,25 @@
 package co.edu.uniquindio.casasrurales.controllers;
 
+import java.util.Map;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
+
 import co.edu.uniquindio.casasrurales.dto.RegistroClienteForm;
 import co.edu.uniquindio.casasrurales.dto.RegistroPropietarioForm;
 import co.edu.uniquindio.casasrurales.services.AutenticacionService;
 import jakarta.validation.Valid;
-import org.springframework.security.core.Authentication;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
-import org.springframework.validation.BindingResult;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
 
 /**
- * Controlador web encargado del flujo de autenticacion y registro.
- * Atiende las vistas de login, registro y redireccion al dashboard segun el rol.
+ * API REST encargada del flujo de autenticación y registro.
+ * Proporciona endpoints para login, registro de propietarios y clientes.
  */
-@Controller
-@RequestMapping
+@RestController
 public class AuthController {
 
     private final AutenticacionService autenticacionService;
@@ -27,74 +28,64 @@ public class AuthController {
         this.autenticacionService = autenticacionService;
     }
 
-    @GetMapping("/login")
-    public String login() {
-        return "auth/login";
-    }
-
-    @GetMapping("/registro/propietario")
-    public String verRegistroPropietario(Model model) {
-        model.addAttribute("registroPropietarioForm", new RegistroPropietarioForm());
-        return "auth/registro-propietario";
-    }
-
-    @PostMapping("/registro/propietario")
-    public String registrarPropietario(@Valid @ModelAttribute RegistroPropietarioForm registroPropietarioForm,
-                                       BindingResult bindingResult,
-                                       Model model) {
-        if (bindingResult.hasErrors()) {
-            return "auth/registro-propietario";
-        }
-
+    /**
+     * Registra un nuevo propietario en el sistema.
+     * 
+     * @param registroPropietarioForm datos del propietario
+     * @return respuesta con mensaje de éxito o error
+     */
+    @PostMapping("/auth/registro/propietario")
+    public ResponseEntity<Map<String, String>> registrarPropietario(
+            @Valid @RequestBody RegistroPropietarioForm registroPropietarioForm) {
         try {
             autenticacionService.registrarPropietario(registroPropietarioForm);
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(Map.of("mensaje", "Propietario registrado exitosamente"));
         } catch (IllegalArgumentException ex) {
-            model.addAttribute("errorRegistro", ex.getMessage());
-            return "auth/registro-propietario";
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", ex.getMessage()));
         }
-
-        return "redirect:/login?registroExitoso";
     }
 
-    @GetMapping("/registro/cliente")
-    public String verRegistroCliente(Model model) {
-        model.addAttribute("registroClienteForm", new RegistroClienteForm());
-        return "auth/registro-cliente";
-    }
-
-    @PostMapping("/registro/cliente")
-    public String registrarCliente(@Valid @ModelAttribute RegistroClienteForm registroClienteForm,
-                                   BindingResult bindingResult,
-                                   Model model) {
-        if (bindingResult.hasErrors()) {
-            return "auth/registro-cliente";
-        }
-
+    /**
+     * Registra un nuevo cliente en el sistema.
+     * 
+     * @param registroClienteForm datos del cliente
+     * @return respuesta con mensaje de éxito o error
+     */
+    @PostMapping("/auth/registro/cliente")
+    public ResponseEntity<Map<String, String>> registrarCliente(
+            @Valid @RequestBody RegistroClienteForm registroClienteForm) {
         try {
             autenticacionService.registrarCliente(registroClienteForm);
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(Map.of("mensaje", "Cliente registrado exitosamente"));
         } catch (IllegalArgumentException ex) {
-            model.addAttribute("errorRegistro", ex.getMessage());
-            return "auth/registro-cliente";
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", ex.getMessage()));
         }
-
-        return "redirect:/login?registroExitoso";
     }
 
-    @GetMapping("/dashboard")
-    public String dashboard(Authentication authentication) {
+    /**
+     * Obtiene información del usuario autenticado.
+     * 
+     * @param authentication información del usuario actual
+     * @return información del usuario autenticado
+     */
+    @GetMapping("/auth/me")
+    public ResponseEntity<Map<String, Object>> getUsuarioActual(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "No autenticado"));
+        }
+
         boolean esPropietario = authentication.getAuthorities().stream()
                 .anyMatch(authority -> authority.getAuthority().equals("ROLE_PROPIETARIO"));
 
-        return esPropietario ? "redirect:/dashboard/propietario" : "redirect:/dashboard/cliente";
-    }
-
-    @GetMapping("/dashboard/propietario")
-    public String dashboardPropietario() {
-        return "dashboard/propietario";
-    }
-
-    @GetMapping("/dashboard/cliente")
-    public String dashboardCliente() {
-        return "dashboard/cliente";
+        return ResponseEntity.ok(Map.of(
+                "usuario", authentication.getName(),
+                "rol", esPropietario ? "PROPIETARIO" : "CLIENTE",
+                "autenticado", true
+        ));
     }
 }

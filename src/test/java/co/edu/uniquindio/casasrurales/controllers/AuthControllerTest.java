@@ -1,58 +1,42 @@
 package co.edu.uniquindio.casasrurales.controllers;
 
+import java.util.Map;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import org.springframework.ui.Model;
-import org.springframework.validation.BindingResult;
-import org.springframework.validation.MapBindingResult;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 
+import co.edu.uniquindio.casasrurales.dto.RegistroClienteForm;
 import co.edu.uniquindio.casasrurales.dto.RegistroPropietarioForm;
 import co.edu.uniquindio.casasrurales.services.AutenticacionService;
 
 /**
- * Pruebas unitarias del controlador de autenticación.
- * Valida el comportamiento de los endpoints de registro sin necesidad de MockMvc.
+ * Pruebas unitarias del controlador REST de autenticación.
+ * Valida el comportamiento de los endpoints de registro con respuestas JSON.
  */
-@DisplayName("AuthController - Pruebas Unitarias")
+@DisplayName("AuthController - Pruebas Unitarias REST")
 class AuthControllerTest {
 
     private AuthController authController;
     private AutenticacionService autenticacionService;
-    private Model model;
-    private BindingResult bindingResult;
 
     @BeforeEach
     void setUp() {
         autenticacionService = mock(AutenticacionService.class);
         authController = new AuthController(autenticacionService);
-        model = mock(Model.class);
-        bindingResult = new MapBindingResult(java.util.Map.of(), "registroPropietarioForm");
     }
 
-    @DisplayName("HU1-C01: GET /registro/propietario retorna la vista de formulario")
+    @DisplayName("HU1-C01: POST /auth/registro/propietario exitoso retorna CREATED")
     @Test
-    void testObtenerFormularioRegistroPropietario() {
-        // Act
-        String vista = authController.verRegistroPropietario(model);
-
-        // Assert
-        assertEquals("auth/registro-propietario", vista);
-        verify(model, times(1)).addAttribute(eq("registroPropietarioForm"), any());
-    }
-
-    @DisplayName("HU1-C02: POST /registro/propietario exitoso redirige a login")
-    @Test
-    void testRegistroPropietarioExitoso() {
+    void testRegistroPropietario_Exitoso() {
         // Arrange
         RegistroPropietarioForm formulario = new RegistroPropietarioForm();
         formulario.setNombreCuenta("juan123");
@@ -62,34 +46,18 @@ class AuthControllerTest {
         formulario.setPassword("Password123");
 
         // Act
-        String resultado = authController.registrarPropietario(formulario, bindingResult, model);
+        ResponseEntity<Map<String, String>> respuesta = authController.registrarPropietario(formulario);
 
         // Assert
-        assertEquals("redirect:/login?registroExitoso", resultado);
+        assertEquals(HttpStatus.CREATED, respuesta.getStatusCode());
+        assertNotNull(respuesta.getBody());
+        assertEquals("Propietario registrado exitosamente", respuesta.getBody().get("mensaje"));
         verify(autenticacionService, times(1)).registrarPropietario(formulario);
     }
 
-    @DisplayName("HU1-C03: POST /registro/propietario con error devuelve formulario")
+    @DisplayName("HU1-C02: POST /auth/registro/propietario email duplicado retorna BAD_REQUEST")
     @Test
-    void testRegistroFallaConErrorDeValidacion() {
-        // Arrange
-        RegistroPropietarioForm formulario = new RegistroPropietarioForm();
-        formulario.setNombreCuenta("juan123");
-        MapBindingResult bindingResultConErrores = new MapBindingResult(
-                java.util.Map.of(), "registroPropietarioForm");
-        bindingResultConErrores.reject("campo.requerido", "El campo es requerido");
-
-        // Act
-        String resultado = authController.registrarPropietario(formulario, bindingResultConErrores, model);
-
-        // Assert
-        assertEquals("auth/registro-propietario", resultado);
-        verify(autenticacionService, never()).registrarPropietario(any());
-    }
-
-    @DisplayName("HU1-C04: POST /registro/propietario muestra error si email existe")
-    @Test
-    void testRegistroFallaEmailDuplicado() {
+    void testRegistroPropietario_EmailDuplicado() {
         // Arrange
         RegistroPropietarioForm formulario = new RegistroPropietarioForm();
         formulario.setNombreCuenta("juan123");
@@ -102,16 +70,18 @@ class AuthControllerTest {
                 .when(autenticacionService).registrarPropietario(formulario);
 
         // Act
-        String resultado = authController.registrarPropietario(formulario, bindingResult, model);
+        ResponseEntity<Map<String, String>> respuesta = authController.registrarPropietario(formulario);
 
         // Assert
-        assertEquals("auth/registro-propietario", resultado);
-        verify(model, times(1)).addAttribute("errorRegistro", "Ya existe una cuenta registrada con ese correo");
+        assertEquals(HttpStatus.BAD_REQUEST, respuesta.getStatusCode());
+        assertNotNull(respuesta.getBody());
+        assertEquals("Ya existe una cuenta registrada con ese correo", respuesta.getBody().get("error"));
+        verify(autenticacionService, times(1)).registrarPropietario(formulario);
     }
 
-    @DisplayName("HU1-C05: POST /registro/propietario muestra error si nombreCuenta existe")
+    @DisplayName("HU1-C03: POST /auth/registro/propietario nombreCuenta duplicado retorna BAD_REQUEST")
     @Test
-    void testRegistroFallaNombreCuentaDuplicado() {
+    void testRegistroPropietario_NombreCuentaDuplicado() {
         // Arrange
         RegistroPropietarioForm formulario = new RegistroPropietarioForm();
         formulario.setNombreCuenta("existente");
@@ -124,31 +94,77 @@ class AuthControllerTest {
                 .when(autenticacionService).registrarPropietario(formulario);
 
         // Act
-        String resultado = authController.registrarPropietario(formulario, bindingResult, model);
+        ResponseEntity<Map<String, String>> respuesta = authController.registrarPropietario(formulario);
 
         // Assert
-        assertEquals("auth/registro-propietario", resultado);
-        verify(model, times(1)).addAttribute("errorRegistro", "El nombre de cuenta ya existe. Por favor, elige otro.");
+        assertEquals(HttpStatus.BAD_REQUEST, respuesta.getStatusCode());
+        assertNotNull(respuesta.getBody());
+        assertEquals("El nombre de cuenta ya existe. Por favor, elige otro.", respuesta.getBody().get("error"));
+        verify(autenticacionService, times(1)).registrarPropietario(formulario);
     }
 
-    @DisplayName("HU1-C06: POST /registro/propietario maneja excepciones genéricas")
+    @DisplayName("HU1-C04: POST /auth/registro/cliente exitoso retorna CREATED")
     @Test
-    void testRegistroManejaSexcepciones() {
+    void testRegistroCliente_Exitoso() {
         // Arrange
-        RegistroPropietarioForm formulario = new RegistroPropietarioForm();
-        formulario.setNombreCuenta("juan123");
-        formulario.setEmail("juan@example.com");
-        formulario.setTelefono("1234567890");
-        formulario.setNumeroCuentaBancaria("123456789");
-        formulario.setPassword("Password123");
+        RegistroClienteForm formulario = new RegistroClienteForm();
+        formulario.setEmail("carla@example.com");
+        formulario.setTelefono("3008881234");
+        formulario.setPassword("Password456");
 
-        doThrow(new RuntimeException("Error inesperado"))
-                .when(autenticacionService).registrarPropietario(formulario);
+        // Act
+        ResponseEntity<Map<String, String>> respuesta = authController.registrarCliente(formulario);
 
-        // Act & Assert - Espera que lance la excepción o la maneje
-        assertThrows(RuntimeException.class, () -> 
-            authController.registrarPropietario(formulario, bindingResult, model)
-        );
+        // Assert
+        assertEquals(HttpStatus.CREATED, respuesta.getStatusCode());
+        assertNotNull(respuesta.getBody());
+        assertEquals("Cliente registrado exitosamente", respuesta.getBody().get("mensaje"));
+        verify(autenticacionService, times(1)).registrarCliente(formulario);
+    }
+
+    @DisplayName("HU1-C05: POST /auth/registro/cliente email duplicado retorna BAD_REQUEST")
+    @Test
+    void testRegistroCliente_EmailDuplicado() {
+        // Arrange
+        RegistroClienteForm formulario = new RegistroClienteForm();
+        formulario.setEmail("duplicado@example.com");
+        formulario.setTelefono("3008881234");
+        formulario.setPassword("Password456");
+
+        doThrow(new IllegalArgumentException("Ya existe una cuenta registrada con ese correo"))
+                .when(autenticacionService).registrarCliente(formulario);
+
+        // Act
+        ResponseEntity<Map<String, String>> respuesta = authController.registrarCliente(formulario);
+
+        // Assert
+        assertEquals(HttpStatus.BAD_REQUEST, respuesta.getStatusCode());
+        assertNotNull(respuesta.getBody());
+        assertEquals("Ya existe una cuenta registrada con ese correo", respuesta.getBody().get("error"));
+        verify(autenticacionService, times(1)).registrarCliente(formulario);
+    }
+
+    @DisplayName("HU1-C06: POST /auth/registro/cliente error genérico retorna BAD_REQUEST")
+    @Test
+    void testRegistroCliente_ErrorGenerico() {
+        // Arrange
+        RegistroClienteForm formulario = new RegistroClienteForm();
+        formulario.setEmail("nuevo@example.com");
+        formulario.setTelefono("3008881234");
+        formulario.setPassword("Password456");
+
+        doThrow(new IllegalArgumentException("Error en el registro"))
+                .when(autenticacionService).registrarCliente(formulario);
+
+        // Act
+        ResponseEntity<Map<String, String>> respuesta = authController.registrarCliente(formulario);
+
+        // Assert
+        assertEquals(HttpStatus.BAD_REQUEST, respuesta.getStatusCode());
+        assertNotNull(respuesta.getBody());
+        assertEquals("Error en el registro", respuesta.getBody().get("error"));
+        verify(autenticacionService, times(1)).registrarCliente(formulario);
     }
 }
+
 

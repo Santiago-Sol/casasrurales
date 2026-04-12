@@ -2,36 +2,35 @@ package co.edu.uniquindio.casasrurales.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 
 /**
- * Configura las reglas de seguridad de la aplicacion.
- * Define que rutas son publicas, que roles pueden acceder al dashboard
- * y el codificador de contrasenas usado por Spring Security.
+ * Configura las reglas de seguridad de la API REST.
+ * Define qué rutas son públicas, qué roles pueden acceder
+ * y el codificador de contraseñas usado por Spring Security.
  */
 @Configuration
+@EnableWebSecurity
 public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+                .csrf(csrf -> csrf.disable())  // Desabililar CSRF para APIs REST
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/", "/registro/**", "/css/**").permitAll()
-                        .requestMatchers("/dashboard/propietario").hasRole("PROPIETARIO")
-                        .requestMatchers("/dashboard/cliente").hasRole("CLIENTE")
-                        .requestMatchers("/busqueda/**").hasRole("CLIENTE")
+                        // Rutas públicas
+                        .requestMatchers("/auth/registro/**").permitAll()
+                        .requestMatchers("/auth/me").authenticated()
+                        // Búsqueda: solo clientes autenticados
+                        .requestMatchers("/api/busqueda/**").hasRole("CLIENTE")
+                        // Cualquier otra solicitud requiere autenticación
                         .anyRequest().authenticated()
                 )
-                .formLogin(login -> login
-                        .loginPage("/login")
-                        .defaultSuccessUrl("/dashboard", true)
-                        .permitAll()
-                )
-                .logout(Customizer.withDefaults());
+                .httpBasic(basic -> {});  // Usar HTTP Basic Authentication para APIs
 
         return http.build();
     }
