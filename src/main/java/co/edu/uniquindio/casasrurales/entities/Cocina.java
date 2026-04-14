@@ -32,7 +32,7 @@ public class Cocina {
     @JoinColumn(name = "codigo_casa", nullable = false)
     private CasaRural casaRural;
 
-    protected Cocina() {
+    public Cocina() {
     }
 
     public Cocina(boolean tieneLavavajillas, boolean tieneLavadora) {

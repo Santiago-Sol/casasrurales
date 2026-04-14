@@ -29,7 +29,7 @@ public class Bano {
     @JoinColumn(name = "codigo_casa", nullable = false)
     private CasaRural casaRural;
 
-    protected Bano() {
+    public Bano() {
     }
 
     public Bano(String observaciones) {

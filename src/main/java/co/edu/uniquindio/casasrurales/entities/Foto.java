@@ -32,7 +32,7 @@ public class Foto {
     @JoinColumn(name = "codigo_casa", nullable = false)
     private CasaRural casaRural;
 
-    protected Foto() {
+    public Foto() {
     }
 
     public Foto(String ruta, String descripcion) {

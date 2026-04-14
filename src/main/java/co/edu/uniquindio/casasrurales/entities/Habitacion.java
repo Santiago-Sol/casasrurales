@@ -52,7 +52,7 @@ public class Habitacion {
     @ManyToMany(mappedBy = "habitaciones")
     private List<Reserva> reservas = new ArrayList<>();
 
-    protected Habitacion() {
+    public Habitacion() {
     }
 
     public Habitacion(String codigoHabitacion, int numeroCamas, TipoCama tipoCama, boolean tieneBano) {

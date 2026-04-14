@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Realizar Reserva - Casas Rurales</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 36px;
+            width: 100%;
+            max-width: 480px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.10);
+        }
+
+        h1 {
+            font-size: 22px;
+            color: #1a1a1a;
+            margin-bottom: 6px;
+        }
+
+        .subtitulo {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 28px;
+        }
+
+        label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 6px;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 15px;
+            color: #1a1a1a;
+            transition: border-color 0.2s;
+            margin-bottom: 18px;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #4a7c59;
+        }
+
+        .campo-error {
+            border-color: #d9534f !important;
+        }
+
+        .msg-error {
+            color: #d9534f;
+            font-size: 12px;
+            margin-top: -14px;
+            margin-bottom: 14px;
+            display: none;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 13px;
+            background: #4a7c59;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-top: 4px;
+        }
+
+        .btn:hover { background: #3a6347; }
+        .btn:disabled { background: #aaa; cursor: not-allowed; }
+
+        .alerta {
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            margin-bottom: 18px;
+            display: none;
+        }
+
+        .alerta-error {
+            background: #fdecea;
+            color: #b71c1c;
+            border: 1px solid #f5c6cb;
+        }
+
+        .credenciales {
+            background: #f0f4f0;
+            border-radius: 8px;
+            padding: 14px;
+            font-size: 13px;
+            color: #555;
+            margin-bottom: 24px;
+        }
+
+        .credenciales strong { color: #333; }
+
+        .fila-dos {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+    </style>
+</head>
+<body>
+<div class="card">
+    <h1>Realizar Reserva</h1>
+    <p class="subtitulo">Completa los datos para reservar tu casa rural</p>
+
+    <!-- Autenticacion HTTP Basic -->
+    <div class="credenciales">
+        <strong>Credenciales de acceso</strong>
+        <div style="margin-top: 10px;">
+            <label>Telefono (usuario)</label>
+            <input type="text" id="telefono" placeholder="3001234567">
+            <label>Contraseña</label>
+            <input type="password" id="password" placeholder="••••••">
+        </div>
+    </div>
+
+    <div class="alerta alerta-error" id="alerta-error"></div>
+
+    <label>Codigo de la casa</label>
+    <input type="number" id="codigoCasa" placeholder="Ej: 101" min="1">
+    <span class="msg-error" id="err-casa">El codigo de la casa es obligatorio</span>
+
+    <div class="fila-dos">
+        <div>
+            <label>Fecha de entrada</label>
+            <input type="date" id="fechaEntrada">
+            <span class="msg-error" id="err-fecha">Selecciona una fecha futura</span>
+        </div>
+        <div>
+            <label>Numero de noches</label>
+            <input type="number" id="numeroNoches" placeholder="1" min="1">
+            <span class="msg-error" id="err-noches">Minimo 1 noche</span>
+        </div>
+    </div>
+
+    <label>Importe total (COP)</label>
+    <input type="number" id="importeTotal" placeholder="Ej: 350000" min="1">
+    <span class="msg-error" id="err-importe">El importe debe ser mayor a cero</span>
+
+    <label>Tipo de reserva</label>
+    <select id="tipoReserva">
+        <option value="CASA_ENTERA">Casa entera</option>
+        <option value="POR_HABITACIONES">Por habitaciones</option>
+    </select>
+
+    <button class="btn" id="btn-reservar" onclick="realizarReserva()">Confirmar Reserva</button>
+</div>
+
+<script>
+    // Establecer fecha minima como mañana
+    const manana = new Date();
+    manana.setDate(manana.getDate() + 1);
+    document.getElementById('fechaEntrada').min = manana.toISOString().split('T')[0];
+
+    function mostrarError(id, mostrar) {
+        const el = document.getElementById(id);
+        if (el) el.style.display = mostrar ? 'block' : 'none';
+    }
+
+    function validarFormulario() {
+        let valido = true;
+
+        const casa = document.getElementById('codigoCasa').value;
+        mostrarError('err-casa', !casa || casa < 1);
+        if (!casa || casa < 1) valido = false;
+
+        const fecha = document.getElementById('fechaEntrada').value;
+        const hoy = new Date().toISOString().split('T')[0];
+        mostrarError('err-fecha', !fecha || fecha <= hoy);
+        if (!fecha || fecha <= hoy) valido = false;
+
+        const noches = document.getElementById('numeroNoches').value;
+        mostrarError('err-noches', !noches || noches < 1);
+        if (!noches || noches < 1) valido = false;
+
+        const importe = document.getElementById('importeTotal').value;
+        mostrarError('err-importe', !importe || importe <= 0);
+        if (!importe || importe <= 0) valido = false;
+
+        return valido;
+    }
+
+    async function realizarReserva() {
+        document.getElementById('alerta-error').style.display = 'none';
+
+        if (!validarFormulario()) return;
+
+        const telefono = document.getElementById('telefono').value.trim();
+        const password = document.getElementById('password').value;
+        const fechaStr = document.getElementById('fechaEntrada').value;
+
+        const body = {
+            codigoCasa: parseInt(document.getElementById('codigoCasa').value),
+            fechaEntrada: new Date(fechaStr + 'T12:00:00').toISOString(),
+            numeroNoches: parseInt(document.getElementById('numeroNoches').value),
+            importeTotal: parseFloat(document.getElementById('importeTotal').value),
+            idsHabitaciones: []
+        };
+
+        const btn = document.getElementById('btn-reservar');
+        btn.disabled = true;
+        btn.textContent = 'Procesando...';
+
+        try {
+            const resp = await fetch('/api/reservas', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Basic ' + btoa(telefono + ':' + password)
+                },
+                body: JSON.stringify(body)
+            });
+
+            const data = await resp.json();
+
+            if (resp.ok) {
+                // Guardar resumen y redirigir a pagina de resumen
+                sessionStorage.setItem('reservaResumen', JSON.stringify(data));
+                window.location.href = '/resumen-reserva.html';
+            } else {
+                const alerta = document.getElementById('alerta-error');
+                alerta.textContent = data.error || 'Error al realizar la reserva. Intentalo de nuevo.';
+                alerta.style.display = 'block';
+            }
+        } catch (e) {
+            const alerta = document.getElementById('alerta-error');
+            alerta.textContent = 'Error de conexion. Verifica tu red e intentalo de nuevo.';
+            alerta.style.display = 'block';
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Confirmar Reserva';
+        }
+    }
+</script>
+</body>
+</html>

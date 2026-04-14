@@ -39,7 +39,7 @@ public class Propietario extends Usuario {
     @OneToMany(mappedBy = "propietario", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<CasaRural> casas = new ArrayList<>();
 
-    protected Propietario() {
+    public Propietario(String number) {
     }
 
     public Propietario(String telefono, String nombreCuenta, String contrasena, String numeroCuentaBancaria) {

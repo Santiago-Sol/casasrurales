@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reserva Confirmada - Casas Rurales</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 36px;
+      width: 100%;
+      max-width: 480px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.10);
+    }
+
+    .icono-ok {
+      width: 56px;
+      height: 56px;
+      background: #e8f5e9;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+    }
+
+    .icono-ok svg { width: 28px; height: 28px; }
+
+    h1 {
+      text-align: center;
+      font-size: 22px;
+      color: #1a1a1a;
+      margin-bottom: 6px;
+    }
+
+    .subtitulo {
+      text-align: center;
+      color: #666;
+      font-size: 14px;
+      margin-bottom: 28px;
+    }
+
+    .numero-reserva {
+      background: #f0f4f0;
+      border: 2px solid #4a7c59;
+      border-radius: 10px;
+      padding: 16px;
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    .numero-reserva .etiqueta {
+      font-size: 12px;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .numero-reserva .valor {
+      font-size: 32px;
+      font-weight: 700;
+      color: #4a7c59;
+      margin-top: 4px;
+    }
+
+    .detalle-fila {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid #f0f0f0;
+      font-size: 14px;
+    }
+
+    .detalle-fila:last-child { border-bottom: none; }
+
+    .detalle-fila .campo { color: #666; }
+
+    .detalle-fila .valor-campo {
+      font-weight: 600;
+      color: #1a1a1a;
+    }
+
+    .badge-estado {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .estado-pendiente {
+      background: #fff8e1;
+      color: #f57f17;
+    }
+
+    .estado-confirmada {
+      background: #e8f5e9;
+      color: #2e7d32;
+    }
+
+    .aviso-anticipo {
+      background: #fff8e1;
+      border: 1px solid #ffe082;
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 13px;
+      color: #5d4037;
+      margin-top: 20px;
+      margin-bottom: 20px;
+    }
+
+    .aviso-anticipo strong { color: #e65100; }
+
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 13px;
+      background: #4a7c59;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
+      text-decoration: none;
+      margin-top: 8px;
+      transition: background 0.2s;
+    }
+
+    .btn:hover { background: #3a6347; }
+
+    .btn-secundario {
+      background: white;
+      color: #4a7c59;
+      border: 2px solid #4a7c59;
+    }
+
+    .btn-secundario:hover { background: #f0f4f0; }
+
+    .sin-datos {
+      text-align: center;
+      color: #999;
+      padding: 40px 0;
+    }
+  </style>
+</head>
+<body>
+<div class="card" id="contenido">
+  <div class="sin-datos">Cargando resumen...</div>
+</div>
+
+<script>
+  function formatFecha(isoStr) {
+    if (!isoStr) return '—';
+    const d = new Date(isoStr);
+    return d.toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' });
+  }
+
+  function formatMoneda(valor) {
+    return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(valor);
+  }
+
+  function badgeEstado(estado) {
+    const clases = {
+      'PENDIENTE_PAGO': 'estado-pendiente',
+      'CONFIRMADA': 'estado-confirmada'
+    };
+    const cls = clases[estado] || '';
+    const texto = estado ? estado.replace('_', ' ') : estado;
+    return `<span class="badge-estado ${cls}">${texto}</span>`;
+  }
+
+  const datos = sessionStorage.getItem('reservaResumen');
+
+  if (!datos) {
+    document.getElementById('contenido').innerHTML = `
+            <div class="sin-datos">
+                <p>No se encontro informacion de reserva.</p>
+                <a href="/reservas.html" class="btn" style="margin-top: 20px;">Hacer una reserva</a>
+            </div>`;
+  } else {
+    const r = JSON.parse(datos);
+    const anticipo = r.importeAnticipo || (r.importeTotal * 0.20);
+    const fechaLimite = formatFecha(r.fechaLimitePago);
+
+    document.getElementById('contenido').innerHTML = `
+            <div class="icono-ok">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#4a7c59" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12"/>
+                </svg>
+            </div>
+            <h1>Reserva Registrada</h1>
+            <p class="subtitulo">Tu solicitud fue recibida exitosamente</p>
+
+            <div class="numero-reserva">
+                <div class="etiqueta">N° de Reserva</div>
+                <div class="valor">#${r.numeroReserva}</div>
+            </div>
+
+            <div class="detalle-fila">
+                <span class="campo">Casa</span>
+                <span class="valor-campo">${r.poblacionCasa} (Cod. ${r.codigoCasa})</span>
+            </div>
+            <div class="detalle-fila">
+                <span class="campo">Fecha de entrada</span>
+                <span class="valor-campo">${formatFecha(r.fechaEntrada)}</span>
+            </div>
+            <div class="detalle-fila">
+                <span class="campo">Numero de noches</span>
+                <span class="valor-campo">${r.numeroNoches} noche(s)</span>
+            </div>
+            <div class="detalle-fila">
+                <span class="campo">Tipo de reserva</span>
+                <span class="valor-campo">${r.tipoReserva === 'CASA_ENTERA' ? 'Casa entera' : 'Por habitaciones'}</span>
+            </div>
+            <div class="detalle-fila">
+                <span class="campo">Importe total</span>
+                <span class="valor-campo">${formatMoneda(r.importeTotal)}</span>
+            </div>
+            <div class="detalle-fila">
+                <span class="campo">Anticipo requerido (20%)</span>
+                <span class="valor-campo">${formatMoneda(anticipo)}</span>
+            </div>
+            <div class="detalle-fila">
+                <span class="campo">Estado</span>
+                <span class="valor-campo">${badgeEstado(r.estado)}</span>
+            </div>
+
+            <div class="aviso-anticipo">
+                Debes pagar el anticipo de <strong>${formatMoneda(anticipo)}</strong>
+                antes del <strong>${fechaLimite}</strong> para confirmar tu reserva.
+            </div>
+
+            <button class="btn btn-secundario" onclick="window.print()">Imprimir resumen</button>
+            <a href="/reservas.html" class="btn" style="margin-top: 10px;">Nueva reserva</a>
+        `;
+
+    // Limpiar sesion despues de mostrar
+    sessionStorage.removeItem('reservaResumen');
+  }
+</script>
+</body>
+</html>
