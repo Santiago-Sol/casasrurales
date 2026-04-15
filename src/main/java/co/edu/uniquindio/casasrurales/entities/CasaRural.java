@@ -1,21 +1,20 @@
 package co.edu.uniquindio.casasrurales.entities;
 
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
+
 import co.edu.uniquindio.casasrurales.enums.EstadoDisponibilidad;
 import co.edu.uniquindio.casasrurales.enums.EstadoReserva;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.ManyToOne;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
-import jakarta.persistence.Transient;
-
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.List;
 
 /**
  * Entidad principal del dominio que representa una casa rural publicada en el sistema.
@@ -31,6 +30,9 @@ public class CasaRural {
 
     @Column(nullable = false, length = 120)
     private String poblacion;
+
+    @Column(nullable = false, length = 150)
+    private String nombrePropiedad;
 
     @Column(name = "descripcion_general", columnDefinition = "TEXT")
     private String descripcionGeneral;
@@ -78,10 +80,11 @@ public class CasaRural {
     protected CasaRural() {
     }
 
-    public CasaRural(int codigoCasa, String poblacion, String descripcionGeneral, int numComedores,
+    public CasaRural(int codigoCasa, String poblacion, String nombrePropiedad, String descripcionGeneral, int numComedores,
                      int numPlazasGaraje, boolean activa) {
         this.codigoCasa = codigoCasa;
         this.poblacion = poblacion;
+        this.nombrePropiedad = nombrePropiedad;
         this.descripcionGeneral = descripcionGeneral;
         this.numComedores = numComedores;
         this.numPlazasGaraje = numPlazasGaraje;
@@ -110,6 +113,30 @@ public class CasaRural {
 
     public boolean isActiva() {
         return activa;
+    }
+
+    public void setActiva(boolean activa) {
+        this.activa = activa;
+    }
+
+    public int getNumDormitorios() {
+        return numDormitorios;
+    }
+
+    public int getNumBanos() {
+        return numBanos;
+    }
+
+    public int getNumCocinas() {
+        return numCocinas;
+    }
+
+    public String getNombrePropiedad() {
+        return nombrePropiedad;
+    }
+
+    public void setNombrePropiedad(String nombrePropiedad) {
+        this.nombrePropiedad = nombrePropiedad;
     }
 
     public Propietario getPropietario() {

@@ -126,4 +126,46 @@ public class AutenticacionService {
             throw new IllegalArgumentException("La contraseña debe tener al menos 8 caracteres");
         }
     }
+
+    /**
+     * Autentica un propietario validando nombre de cuenta y contraseña.
+     * 
+     * @param nombreCuenta Nombre de cuenta del propietario
+     * @param contrasena Contraseña sin cifrar
+     * @return ID del propietario autenticado
+     * @throws IllegalArgumentException si las credenciales son inválidas
+     */
+    public int autenticarPropietario(String nombreCuenta, String contrasena) {
+        Propietario propietario = propietarioRepository.findByNombreCuenta(nombreCuenta)
+                .orElseThrow(() -> new IllegalArgumentException("Nombre de cuenta o contraseña incorrectos"));
+        
+        if (!passwordEncoder.matches(contrasena, propietario.getContrasena())) {
+            throw new IllegalArgumentException("Nombre de cuenta o contraseña incorrectos");
+        }
+
+        return propietario.getIdUsuario();
+    }
+
+    /**
+     * Autentica un cliente validando email y contraseña.
+     * 
+     * @param email Email del cliente
+     * @param contrasena Contraseña sin cifrar
+     * @return ID del cliente autenticado
+     * @throws IllegalArgumentException si las credenciales son inválidas
+     */
+    public int autenticarCliente(String email, String contrasena) {
+        Cuenta cuenta = cuentaRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("Email o contraseña incorrectos"));
+        
+        if (!passwordEncoder.matches(contrasena, cuenta.getPassword())) {
+            throw new IllegalArgumentException("Email o contraseña incorrectos");
+        }
+
+        if (cuenta.getCliente() == null) {
+            throw new IllegalArgumentException("Esta cuenta no es de cliente");
+        }
+
+        return cuenta.getCliente().getIdUsuario();
+    }
 }

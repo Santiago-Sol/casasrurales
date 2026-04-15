@@ -90,4 +90,64 @@ public class AuthController {
         
         return ResponseEntity.ok(respuesta);
     }
+
+    /**
+     * Autentica un propietario con nombre de cuenta y contraseña.
+     * 
+     * @param loginData mapa con nombreCuenta y contrasena
+     * @return información del propietario autenticado
+     */
+    @PostMapping("/auth/login/propietario")
+    public ResponseEntity<Map<String, Object>> loginPropietario(@RequestBody Map<String, String> loginData) {
+        try {
+            String nombreCuenta = loginData.get("nombreCuenta");
+            String contrasena = loginData.get("contrasena");
+
+            if (nombreCuenta == null || contrasena == null) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("error", "Nombre de cuenta y contraseña son requeridos"));
+            }
+
+            int idPropietario = autenticacionService.autenticarPropietario(nombreCuenta, contrasena);
+
+            return ResponseEntity.ok(Map.of(
+                    "idUsuario", idPropietario,
+                    "nombreCuenta", nombreCuenta,
+                    "rol", "PROPIETARIO"
+            ));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", ex.getMessage()));
+        }
+    }
+
+    /**
+     * Autentica un cliente con email y contraseña.
+     * 
+     * @param loginData mapa con email y contrasena
+     * @return información del cliente autenticado
+     */
+    @PostMapping("/auth/login/cliente")
+    public ResponseEntity<Map<String, Object>> loginCliente(@RequestBody Map<String, String> loginData) {
+        try {
+            String email = loginData.get("email");
+            String contrasena = loginData.get("contrasena");
+
+            if (email == null || contrasena == null) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("error", "Usuario y contraseña son requeridos"));
+            }
+
+            int idCliente = autenticacionService.autenticarCliente(email, contrasena);
+
+            return ResponseEntity.ok(Map.of(
+                    "idUsuario", idCliente,
+                    "email", email,
+                    "rol", "CLIENTE"
+            ));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", ex.getMessage()));
+        }
+    }
 }
