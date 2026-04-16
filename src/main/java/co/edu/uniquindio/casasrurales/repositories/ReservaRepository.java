@@ -19,4 +19,5 @@ public interface ReservaRepository extends JpaRepository<Reserva, Integer> {
     List<Reserva> findByEstado(EstadoReserva estado);
 
     List<Reserva> findByFechaEntradaBetween(Date fechaInicio, Date fechaFin);
+    List<Reserva> findByCliente_IdUsuario(int idUsuario);
 }

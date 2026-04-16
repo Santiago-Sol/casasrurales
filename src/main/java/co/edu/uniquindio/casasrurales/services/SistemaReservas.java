@@ -13,6 +13,7 @@ import co.edu.uniquindio.casasrurales.repositories.ReservaRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
+import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
@@ -137,4 +138,11 @@ public class SistemaReservas {
         return "Casas registradas: %d, reservas activas: %d"
                 .formatted(casaRuralRepository.count(), reservaRepository.count());
     }
+    public List<Reserva> getReservasPorCliente(int idCliente) {
+        return reservaRepository.findByCliente_IdUsuario(idCliente);
+    }
+    public Reserva buscarReservaPorNumero(int numeroReserva) {
+        return reservaRepository.findById(numeroReserva).orElse(null);
+    }
+
 }
