@@ -35,7 +35,7 @@ public class SecurityConfig {
                         // Búsqueda: solo clientes autenticados
                         .requestMatchers("/api/busqueda/**").hasRole("CLIENTE")
                         // Cualquier otra solicitud requiere autenticación
-                        .anyRequest().authenticated()
+                        .anyRequest().permitAll()
                 )
                 .httpBasic(basic -> basic.disable());  // Desabilitar HTTP Basic Auth para APIs
 
