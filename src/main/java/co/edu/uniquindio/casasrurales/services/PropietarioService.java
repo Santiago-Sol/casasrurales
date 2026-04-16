@@ -13,12 +13,6 @@ import co.edu.uniquindio.casasrurales.enums.TipoCama;
 import co.edu.uniquindio.casasrurales.repositories.CasaRuralRepository;
 import co.edu.uniquindio.casasrurales.repositories.PropietarioRepository;
 import co.edu.uniquindio.casasrurales.repositories.ReservaRepository;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
 
 /**
  * Servicio que maneja operaciones relacionadas con propietarios.
@@ -37,6 +31,70 @@ public class PropietarioService {
         this.propietarioRepository = propietarioRepository;
         this.casaRuralRepository = casaRuralRepository;
         this.reservaRepository = reservaRepository;
+    }
+
+    /**
+     * Crea una nueva casa asociada al propietario.
+     */
+    @Transactional
+    public CasaRuralPropietarioDTO crearCasa(RegistroCasaForm form, int idPropietario) {
+        Optional<Propietario> propietarioOpt = propietarioRepository.findById(idPropietario);
+        if (propietarioOpt.isEmpty()) {
+            throw new IllegalArgumentException("Propietario no encontrado");
+        }
+
+        if (casaRuralRepository.existsById(form.getCodigoCasa())) {
+            throw new IllegalArgumentException("Ya existe una casa con ese código");
+        }
+
+        CasaRural casa = new CasaRural(
+                form.getCodigoCasa(),
+                form.getPoblacion(),
+                form.getNombrePropiedad(),
+                form.getDescripcionGeneral(),
+                form.getNumComedores(),
+                form.getNumPlazasGaraje(),
+                true
+        );
+
+        Propietario propietario = propietarioOpt.get();
+        casa.setPropietario(propietario);
+
+        casaRuralRepository.save(casa);
+
+        return convertirACasaDTO(casa);
+    }
+
+    /**
+     * Actualiza los campos editables de una casa si el propietario es el dueño.
+     */
+    @Transactional
+    public CasaRuralPropietarioDTO actualizarCasa(int codigoCasa, RegistroCasaForm form, int idPropietario) {
+        Optional<Propietario> propietarioOpt = propietarioRepository.findById(idPropietario);
+        if (propietarioOpt.isEmpty()) {
+            throw new IllegalArgumentException("Propietario no encontrado");
+        }
+
+        Optional<CasaRural> casaOpt = casaRuralRepository.findById(codigoCasa);
+        if (casaOpt.isEmpty()) {
+            throw new IllegalArgumentException("Casa no encontrada");
+        }
+
+        CasaRural casa = casaOpt.get();
+        if (casa.getPropietario().getIdUsuario() != idPropietario) {
+            throw new IllegalArgumentException("No tienes permiso para actualizar esta casa");
+        }
+
+        // Actualizar campos permitidos
+        casa.setNombrePropiedad(form.getNombrePropiedad());
+        casa.setPoblacion(form.getPoblacion());
+        casa.setDescripcionGeneral(form.getDescripcionGeneral());
+        casa.setNumComedores(form.getNumComedores());
+        casa.setNumPlazasGaraje(form.getNumPlazasGaraje());
+
+        casaRuralRepository.save(casa);
+
+        return convertirACasaDTO(casa);
     }
 
     /**
@@ -216,19 +274,20 @@ public class PropietarioService {
                 .count();
 
         return new CasaRuralPropietarioDTO(
-                casa.getCodigoCasa(),
-                casa.getNombrePropiedad(),
-                casa.getPoblacion(),
-                casa.getDescripcionGeneral(),
-                casa.getNumDormitorios(),
-                casa.getNumBanos(),
-                0, // salas - no está en la entidad actual
-                casa.getNumCocinas(),
-                casa.getNumPlazasGaraje(),
-                0, // precio aproximado - revisar entidad
-                casa.isActiva(),
-                todasLasReservas.size(),
-                (int) reservasActivas
+            casa.getCodigoCasa(),
+            casa.getNombrePropiedad(),
+            casa.getPoblacion(),
+            casa.getDescripcionGeneral(),
+            casa.getNumDormitorios(),
+            casa.getNumBanos(),
+            casa.getNumComedores(),
+            0, // salas - no está en la entidad actual
+            casa.getNumCocinas(),
+            casa.getNumPlazasGaraje(),
+            0, // precio aproximado - revisar entidad
+            casa.isActiva(),
+            todasLasReservas.size(),
+            (int) reservasActivas
         );
     }
 

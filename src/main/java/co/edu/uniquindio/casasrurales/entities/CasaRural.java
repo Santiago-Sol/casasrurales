@@ -139,12 +139,24 @@ public class CasaRural {
         return numDormitorios;
     }
 
+    public void setNumDormitorios(int numDormitorios) {
+        this.numDormitorios = numDormitorios;
+    }
+
     public int getNumBanos() {
         return numBanos;
     }
 
+    public void setNumBanos(int numBanos) {
+        this.numBanos = numBanos;
+    }
+
     public int getNumCocinas() {
         return numCocinas;
+    }
+
+    public void setNumCocinas(int numCocinas) {
+        this.numCocinas = numCocinas;
     }
 
     public String getNombrePropiedad() {

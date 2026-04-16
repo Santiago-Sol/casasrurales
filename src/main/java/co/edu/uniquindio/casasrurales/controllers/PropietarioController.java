@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import co.edu.uniquindio.casasrurales.dto.CasaRuralFormDTO;
 import co.edu.uniquindio.casasrurales.dto.CasaRuralPropietarioDTO;
+import co.edu.uniquindio.casasrurales.dto.RegistroCasaForm;
 import co.edu.uniquindio.casasrurales.services.PropietarioService;
 import jakarta.validation.Valid;
 
@@ -186,6 +187,44 @@ public class PropietarioController {
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("error", ex.getMessage()));
+        }
+    }
+
+    /**
+     * Crea una nueva casa para el propietario autenticado.
+     */
+    @PostMapping("/casas")
+    public ResponseEntity<?> crearCasa(@Valid @RequestBody RegistroCasaForm form, Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Debe estar autenticado"));
+        }
+
+        try {
+            int idPropietario = Integer.parseInt(authentication.getName());
+            var dto = propietarioService.crearCasa(form, idPropietario);
+            return ResponseEntity.status(HttpStatus.CREATED).body(dto);
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", ex.getMessage()));
+        }
+    }
+
+    /**
+     * Actualiza información básica de una casa del propietario.
+     */
+    @PutMapping("/{codigoCasa}")
+    public ResponseEntity<?> actualizarCasa(@PathVariable int codigoCasa,
+                                           @Valid @RequestBody RegistroCasaForm form,
+                                           Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Debe estar autenticado"));
+        }
+
+        try {
+            int idPropietario = Integer.parseInt(authentication.getName());
+            var dto = propietarioService.actualizarCasa(codigoCasa, form, idPropietario);
+            return ResponseEntity.ok(dto);
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", ex.getMessage()));
         }
     }
 }
