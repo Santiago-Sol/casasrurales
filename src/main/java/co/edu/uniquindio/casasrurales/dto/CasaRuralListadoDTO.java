@@ -7,6 +7,7 @@ package co.edu.uniquindio.casasrurales.dto;
 public class CasaRuralListadoDTO {
 
     private int codigoCasa;
+    private String nombrePropiedad;
     private String poblacion;
     private int numDormitorios;
     private int numBanos;
@@ -14,10 +15,11 @@ public class CasaRuralListadoDTO {
     private String descripcionGeneral;
     private String nombrePropietario;
 
-    public CasaRuralListadoDTO(int codigoCasa, String poblacion, int numDormitorios,
+    public CasaRuralListadoDTO(int codigoCasa, String nombrePropiedad, String poblacion, int numDormitorios,
                               int numBanos, int numCocinas, String descripcionGeneral,
                               String nombrePropietario) {
         this.codigoCasa = codigoCasa;
+        this.nombrePropiedad = nombrePropiedad;
         this.poblacion = poblacion;
         this.numDormitorios = numDormitorios;
         this.numBanos = numBanos;
@@ -29,6 +31,10 @@ public class CasaRuralListadoDTO {
     // Getters
     public int getCodigoCasa() {
         return codigoCasa;
+    }
+
+    public String getNombrePropiedad() {
+        return nombrePropiedad;
     }
 
     public String getPoblacion() {
