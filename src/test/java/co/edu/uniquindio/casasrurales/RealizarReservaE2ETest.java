@@ -59,11 +59,11 @@ class RealizarReservaE2ETest {
     @BeforeEach
     void prepararDatos() {
         // Propietario
-        Propietario propietario = new Propietario("3009999999");
+        Propietario propietario = new Propietario();
         propietarioRepository.save(propietario);
 
         // Casa valida (minimo: 1 foto, 3 habitaciones, 1 cocina, 2 banos)
-        casaRural = new CasaRural(1, "Armenia", "Casa de prueba E2E", 1, 2, true);
+        casaRural = new CasaRural(1, "Armenia", "Casa de prueba E2E", "casa blanca", 2, 1, true);
         casaRural.setPropietario(propietario);
         casaRural.agregarFoto(new Foto());
         casaRural.agregarHabitacion(new Habitacion());
