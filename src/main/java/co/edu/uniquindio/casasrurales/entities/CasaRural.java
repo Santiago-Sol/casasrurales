@@ -264,6 +264,6 @@ public class CasaRural {
     }
 
     public boolean esValida() {
-        return !fotos.isEmpty() && habitaciones.size() >= 3 && cocinas.size() >= 1 && banos.size() >= 2;
+        return !fotos.isEmpty() && habitaciones.size() >= 3 && cocinas.size() >= 1 && banos.size() >= 1;
     }
 }

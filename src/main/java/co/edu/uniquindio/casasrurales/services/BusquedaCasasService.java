@@ -1,7 +1,6 @@
 package co.edu.uniquindio.casasrurales.services;
 
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -18,13 +17,11 @@ import co.edu.uniquindio.casasrurales.entities.CasaRural;
 import co.edu.uniquindio.casasrurales.entities.Cocina;
 import co.edu.uniquindio.casasrurales.entities.Foto;
 import co.edu.uniquindio.casasrurales.entities.Habitacion;
-import co.edu.uniquindio.casasrurales.entities.PaqueteAlquiler;
 import co.edu.uniquindio.casasrurales.repositories.BanoRepository;
 import co.edu.uniquindio.casasrurales.repositories.CasaRuralRepository;
 import co.edu.uniquindio.casasrurales.repositories.CocinaRepository;
 import co.edu.uniquindio.casasrurales.repositories.FotoRepository;
 import co.edu.uniquindio.casasrurales.repositories.HabitacionRepository;
-import co.edu.uniquindio.casasrurales.repositories.PaqueteAlquilerRepository;
 import jakarta.transaction.Transactional;
 
 /**
@@ -37,20 +34,17 @@ import jakarta.transaction.Transactional;
 public class BusquedaCasasService {
 
     private final CasaRuralRepository casaRuralRepository;
-    private final PaqueteAlquilerRepository paqueteAlquilerRepository;
     private final HabitacionRepository habitacionRepository;
     private final CocinaRepository cocinaRepository;
     private final BanoRepository banoRepository;
     private final FotoRepository fotoRepository;
 
     public BusquedaCasasService(CasaRuralRepository casaRuralRepository,
-                               PaqueteAlquilerRepository paqueteAlquilerRepository,
                                HabitacionRepository habitacionRepository,
                                CocinaRepository cocinaRepository,
                                BanoRepository banoRepository,
                                FotoRepository fotoRepository) {
         this.casaRuralRepository = casaRuralRepository;
-        this.paqueteAlquilerRepository = paqueteAlquilerRepository;
         this.habitacionRepository = habitacionRepository;
         this.cocinaRepository = cocinaRepository;
         this.banoRepository = banoRepository;
@@ -58,7 +52,7 @@ public class BusquedaCasasService {
     }
 
     /**
-     * Busca casas rurales por población que tengan al menos un paquete activo.
+     * Busca casas rurales activas por población.
      * 
      * @param poblacion la población donde buscar
      * @return lista de DTOs con casas disponibles; lista vacía si no hay resultados
@@ -70,10 +64,8 @@ public class BusquedaCasasService {
 
         List<CasaRural> casas = casaRuralRepository.findByPoblacionIgnoreCase(poblacion.trim());
         
-        // Filtrar solo casas activas con paquetes
         return casas.stream()
                 .filter(CasaRural::isActiva)
-                .filter(this::tienePaqueteActivo)
                 .map(this::convertirACasaListadoDTO)
                 .collect(Collectors.toList());
     }
@@ -83,7 +75,7 @@ public class BusquedaCasasService {
      * 
      * @param codigoCasa el código único de la casa
      * @return DTO con todos los detalles de la casa
-     * @throws IllegalArgumentException si la casa no existe o no tiene paquetes activos
+     * @throws IllegalArgumentException si la casa no existe o no esta activa
      */
     public CasaRuralDetalleDTO obtenerDetalleCasa(int codigoCasa) {
         Optional<CasaRural> casaOpt = casaRuralRepository.findById(codigoCasa);
@@ -94,7 +86,7 @@ public class BusquedaCasasService {
 
         CasaRural casa = casaOpt.get();
         
-        if (!casa.isActiva() || !tienePaqueteActivo(casa)) {
+        if (!casa.isActiva()) {
             throw new IllegalArgumentException("La casa no está disponible para consultar");
         }
 
@@ -119,18 +111,6 @@ public class BusquedaCasasService {
     // === Métodos privados de utilidad ===
 
     /**
-     * Verifica si una casa tiene al menos un paquete de alquiler activo.
-     * Un paquete se considera activo si su fecha final es hoy o posterior.
-     */
-    private boolean tienePaqueteActivo(CasaRural casa) {
-        List<PaqueteAlquiler> paquetes = paqueteAlquilerRepository.findByCasaRuralCodigoCasa(casa.getCodigoCasa());
-        Date hoy = new Date();
-        
-        return paquetes.stream()
-                .anyMatch(p -> p.getFechaFin().after(hoy) || p.getFechaFin().equals(hoy));
-    }
-
-    /**
      * Convierte una entidad CasaRural a CasaRuralListadoDTO.
      */
     private CasaRuralListadoDTO convertirACasaListadoDTO(CasaRural casa) {
@@ -140,6 +120,7 @@ public class BusquedaCasasService {
         
         return new CasaRuralListadoDTO(
                 casa.getCodigoCasa(),
+                casa.getNombrePropiedad(),
                 casa.getPoblacion(),
                 numDormitorios,
                 numBanos,
@@ -159,6 +140,7 @@ public class BusquedaCasasService {
         
         CasaRuralDetalleDTO detalle = new CasaRuralDetalleDTO(
                 casa.getCodigoCasa(),
+                casa.getNombrePropiedad(),
                 casa.getPoblacion(),
                 casa.getDescripcionGeneral(),
                 numDormitorios,

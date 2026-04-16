@@ -160,7 +160,9 @@ public class AuthController {
      * @return información del cliente autenticado
      */
     @PostMapping("/auth/login/cliente")
-    public ResponseEntity<Map<String, Object>> loginCliente(@RequestBody Map<String, String> loginData) {
+    public ResponseEntity<Map<String, Object>> loginCliente(
+            @RequestBody Map<String, String> loginData,
+            HttpServletRequest request) {
         try {
             String email = loginData.get("email");
             String contrasena = loginData.get("contrasena");
@@ -171,6 +173,16 @@ public class AuthController {
             }
 
             int idCliente = autenticacionService.autenticarCliente(email, contrasena);
+            Authentication authentication = new UsernamePasswordAuthenticationToken(
+                    String.valueOf(idCliente),
+                    null,
+                    List.of(new SimpleGrantedAuthority("ROLE_CLIENTE")));
+            SecurityContext context = SecurityContextHolder.createEmptyContext();
+            context.setAuthentication(authentication);
+            SecurityContextHolder.setContext(context);
+
+            HttpSession session = request.getSession(true);
+            session.setAttribute("SPRING_SECURITY_CONTEXT", context);
 
             // Crear autenticación y sesión similar al login de propietario
             Authentication authentication = new UsernamePasswordAuthenticationToken(
