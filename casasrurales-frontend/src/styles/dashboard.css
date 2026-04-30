@@ -1,0 +1,385 @@
+.dashboard-container {
+  background: white;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin: 2rem auto;
+  max-width: 1200px;
+}
+
+.dashboard-container h2 {
+  color: #2c3e50;
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.dashboard-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.dashboard-header h2 {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.dashboard-container h3 {
+  color: #2c3e50;
+  margin-bottom: 1rem;
+}
+
+.sin-casas {
+  text-align: center;
+  padding: 2rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  color: #555;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: center;
+}
+
+.casas-propietario {
+  margin-top: 2rem;
+}
+
+.tabla-casas {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+}
+
+.tabla-casas thead {
+  background-color: #2c3e50;
+  color: white;
+}
+
+.tabla-casas th {
+  padding: 1rem;
+  text-align: left;
+  font-weight: 600;
+}
+
+.tabla-casas td {
+  padding: 1rem;
+  border-bottom: 1px solid #ecf0f1;
+}
+
+.tabla-casas tbody tr {
+  transition: background-color 0.3s;
+}
+
+.tabla-casas tbody tr:hover {
+  background-color: #f8f9fa;
+}
+
+.tabla-casas tbody tr.inactiva {
+  opacity: 0.7;
+  background-color: #fef5f5;
+}
+
+.estado-badge {
+  padding: 0.4rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.estado-badge.activa {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.estado-badge.inactiva {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.acciones {
+  text-align: center;
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.btn-primary-action,
+.btn-warning,
+.btn-danger,
+.btn-success,
+.btn-cancelar,
+.btn-confirmar {
+  padding: 0.6rem 1rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: all 0.3s;
+  white-space: nowrap;
+}
+
+.btn-primary-action {
+  background: linear-gradient(135deg, #4f46e5, #4338ca);
+  color: white;
+  box-shadow: 0 8px 18px rgba(79, 70, 229, 0.25);
+}
+
+.btn-primary-action:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(79, 70, 229, 0.3);
+}
+
+.btn-warning {
+  background-color: #f4c542;
+  color: #5b4300;
+}
+
+.btn-warning:hover {
+  background-color: #e0b129;
+  transform: translateY(-2px);
+}
+
+.btn-danger {
+  background-color: #e74c3c;
+  color: white;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background-color: #c0392b;
+  transform: translateY(-2px);
+}
+
+.btn-danger:disabled {
+  background-color: #bdc3c7;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.btn-success {
+  background-color: #27ae60;
+  color: white;
+}
+
+.btn-success:hover {
+  background-color: #229954;
+  transform: translateY(-2px);
+}
+
+/* Modal de confirmación */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-contenido {
+  background: white;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  max-width: 500px;
+  width: 90%;
+  animation: slideIn 0.3s ease-out;
+}
+
+.modal-formulario {
+  max-width: 720px;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(-50px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.modal-contenido h3 {
+  color: #e74c3c;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.modal-cuerpo {
+  margin: 1.5rem 0;
+}
+
+.formulario-casa {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.formulario-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.campo-formulario {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.campo-formulario label {
+  color: #2c3e50;
+  font-weight: 600;
+}
+
+.campo-formulario input,
+.campo-formulario textarea {
+  width: 100%;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid #d7dee5;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.campo-formulario input:focus,
+.campo-formulario textarea:focus {
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+}
+
+.campo-formulario textarea {
+  resize: vertical;
+  min-height: 110px;
+}
+
+.modal-cuerpo p {
+  margin: 0.75rem 0;
+  color: #555;
+  line-height: 1.6;
+}
+
+.info-casa {
+  background: #f8f9fa;
+  padding: 1rem;
+  border-radius: 4px;
+  margin: 1rem 0;
+  border-left: 4px solid #3498db;
+}
+
+.info-casa p {
+  margin: 0.5rem 0;
+  font-size: 0.95rem;
+}
+
+.advertencia {
+  background-color: #fff3cd;
+  color: #856404;
+  padding: 0.75rem;
+  border-radius: 4px;
+  border-left: 4px solid #ffc107;
+  margin-top: 1rem;
+}
+
+.modal-botones {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  justify-content: flex-end;
+}
+
+.btn-cancelar {
+  background-color: #95a5a6;
+  color: white;
+}
+
+.btn-cancelar:hover {
+  background-color: #7f8c8d;
+  transform: translateY(-2px);
+}
+
+.btn-confirmar {
+  background-color: #e74c3c;
+  color: white;
+}
+
+.btn-confirmar:hover {
+  background-color: #c0392b;
+  transform: translateY(-2px);
+}
+
+.mensaje {
+  padding: 1rem;
+  border-radius: 4px;
+  margin-bottom: 1.5rem;
+  text-align: center;
+  font-weight: 600;
+}
+
+.mensaje.exito {
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.mensaje.error {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.mensaje.advertencia {
+  background-color: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeaa7;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .dashboard-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .tabla-casas {
+    font-size: 0.9rem;
+  }
+
+  .tabla-casas th,
+  .tabla-casas td {
+    padding: 0.75rem;
+  }
+
+  .formulario-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .btn-primary-action,
+  .btn-warning,
+  .btn-danger,
+  .btn-success {
+    padding: 0.5rem 0.8rem;
+    font-size: 0.85rem;
+  }
+
+  .modal-contenido {
+    max-width: 90%;
+  }
+
+  .modal-botones {
+    flex-direction: column;
+  }
+}
