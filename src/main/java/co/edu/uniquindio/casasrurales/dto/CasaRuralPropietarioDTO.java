@@ -12,6 +12,7 @@ public class CasaRuralPropietarioDTO {
     private String descripcion;
     private int habitaciones;
     private int banos;
+    private int numComedores;
     private int salas;
     private int cocinas;
     private int plazasGaraje;
@@ -21,7 +22,7 @@ public class CasaRuralPropietarioDTO {
     private int reservasActivas;
 
     public CasaRuralPropietarioDTO(int codigoCasa, String nombrePropiedad, String poblacion, 
-                                   String descripcion, int habitaciones, int banos, int salas, 
+                                   String descripcion, int habitaciones, int banos, int numComedores, int salas, 
                                    int cocinas, int plazasGaraje, long precioAproximado, 
                                    boolean activa, int totalReservas, int reservasActivas) {
         this.codigoCasa = codigoCasa;
@@ -30,6 +31,7 @@ public class CasaRuralPropietarioDTO {
         this.descripcion = descripcion;
         this.habitaciones = habitaciones;
         this.banos = banos;
+        this.numComedores = numComedores;
         this.salas = salas;
         this.cocinas = cocinas;
         this.plazasGaraje = plazasGaraje;
@@ -46,6 +48,7 @@ public class CasaRuralPropietarioDTO {
     public String getDescripcion() { return descripcion; }
     public int getHabitaciones() { return habitaciones; }
     public int getBanos() { return banos; }
+    public int getNumComedores() { return numComedores; }
     public int getSalas() { return salas; }
     public int getCocinas() { return cocinas; }
     public int getPlazasGaraje() { return plazasGaraje; }

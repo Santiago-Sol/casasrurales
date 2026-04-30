@@ -1,5 +1,11 @@
 package co.edu.uniquindio.casasrurales.services;
 
+import java.util.Date;
+import java.util.List;
+import java.util.Objects;
+
+import org.springframework.stereotype.Service;
+
 import co.edu.uniquindio.casasrurales.entities.CasaRural;
 import co.edu.uniquindio.casasrurales.entities.Cliente;
 import co.edu.uniquindio.casasrurales.entities.Habitacion;
@@ -11,12 +17,6 @@ import co.edu.uniquindio.casasrurales.repositories.CasaRuralRepository;
 import co.edu.uniquindio.casasrurales.repositories.PropietarioRepository;
 import co.edu.uniquindio.casasrurales.repositories.ReservaRepository;
 import jakarta.transaction.Transactional;
-import org.springframework.stereotype.Service;
-
-import java.util.Collection;
-import java.util.Date;
-import java.util.List;
-import java.util.Objects;
 
 /**
  * Servicio principal del dominio de reservas.
@@ -143,6 +143,30 @@ public class SistemaReservas {
     }
     public Reserva buscarReservaPorNumero(int numeroReserva) {
         return reservaRepository.findById(numeroReserva).orElse(null);
+    }
+
+    /**
+     * Cancela una reserva si pertenece al cliente y su estado permite cancelación.
+     * @param numeroReserva id de la reserva
+     * @param idCliente id del cliente que solicita la cancelación
+     * @return la reserva actualizada
+     */
+    public Reserva cancelarReserva(int numeroReserva, int idCliente) {
+        Reserva reserva = buscarReservaPorNumero(numeroReserva);
+        if (reserva == null) {
+            throw new IllegalArgumentException("Reserva no encontrada");
+        }
+
+        if (reserva.getCliente() == null || reserva.getCliente().getIdUsuario() != idCliente) {
+            throw new IllegalArgumentException("No tienes permiso para cancelar esta reserva");
+        }
+
+        if (reserva.getEstado() == co.edu.uniquindio.casasrurales.enums.EstadoReserva.ANULADA) {
+            throw new IllegalStateException("La reserva ya está anulada");
+        }
+
+        reserva.cancelar();
+        return reservaRepository.save(reserva);
     }
 
 }

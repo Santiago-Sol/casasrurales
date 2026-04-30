@@ -32,8 +32,8 @@ public class SecurityConfig {
                         .requestMatchers("/auth/registro/**").permitAll()
                         .requestMatchers("/auth/login/**").permitAll()
                         .requestMatchers("/auth/me").authenticated()
-                        // Búsqueda: solo clientes autenticados
-                        .requestMatchers("/api/busqueda/**").hasRole("CLIENTE")
+                        // Búsqueda: clientes y propietarios autenticados
+                        .requestMatchers("/api/busqueda/**").hasAnyRole("CLIENTE", "PROPIETARIO")
                         // Cualquier otra solicitud requiere autenticación
                         .anyRequest().permitAll()
                 )

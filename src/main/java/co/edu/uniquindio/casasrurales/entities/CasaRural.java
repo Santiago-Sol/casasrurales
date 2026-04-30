@@ -99,16 +99,32 @@ public class CasaRural {
         return poblacion;
     }
 
+    public void setPoblacion(String poblacion) {
+        this.poblacion = poblacion;
+    }
+
     public String getDescripcionGeneral() {
         return descripcionGeneral;
+    }
+
+    public void setDescripcionGeneral(String descripcionGeneral) {
+        this.descripcionGeneral = descripcionGeneral;
     }
 
     public int getNumComedores() {
         return numComedores;
     }
 
+    public void setNumComedores(int numComedores) {
+        this.numComedores = numComedores;
+    }
+
     public int getNumPlazasGaraje() {
         return numPlazasGaraje;
+    }
+
+    public void setNumPlazasGaraje(int numPlazasGaraje) {
+        this.numPlazasGaraje = numPlazasGaraje;
     }
 
     public boolean isActiva() {
@@ -123,12 +139,24 @@ public class CasaRural {
         return numDormitorios;
     }
 
+    public void setNumDormitorios(int numDormitorios) {
+        this.numDormitorios = numDormitorios;
+    }
+
     public int getNumBanos() {
         return numBanos;
     }
 
+    public void setNumBanos(int numBanos) {
+        this.numBanos = numBanos;
+    }
+
     public int getNumCocinas() {
         return numCocinas;
+    }
+
+    public void setNumCocinas(int numCocinas) {
+        this.numCocinas = numCocinas;
     }
 
     public String getNombrePropiedad() {
@@ -236,6 +264,6 @@ public class CasaRural {
     }
 
     public boolean esValida() {
-        return !fotos.isEmpty() && habitaciones.size() >= 3 && cocinas.size() >= 1 && banos.size() >= 2;
+        return !fotos.isEmpty() && habitaciones.size() >= 3 && cocinas.size() >= 1 && banos.size() >= 1;
     }
 }

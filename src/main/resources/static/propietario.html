@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Panel Propietario</title>
+    <link rel="stylesheet" href="/css/app.css">
+    <style>
+        .container { max-width: 960px; margin: 28px auto; padding: 16px; }
+        .lista { margin-top: 18px; }
+        .casa { background: #fff; padding: 12px; border-radius: 8px; margin-bottom: 8px; display:flex; justify-content:space-between; align-items:center }
+        .acciones button { margin-left: 8px }
+        .form { background: #fff; padding: 16px; border-radius: 8px; margin-top: 12px }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Panel de Propietario</h1>
+    <p>Gestiona tus casas: crear, editar o eliminar.</p>
+
+    <div>
+        <label>Telefono (usuario)</label>
+        <input id="telefono" placeholder="3001234567">
+        <label>Contraseña</label>
+        <input id="password" type="password" placeholder="••••••">
+        <button onclick="cargarMisCasas()">Cargar mis casas</button>
+        <button onclick="mostrarFormCrear()">Registrar casa</button>
+    </div>
+
+    <div id="mensajes" style="margin-top:12px"></div>
+
+    <div id="lista" class="lista"></div>
+
+    <div id="formulario" class="form" style="display:none">
+        <h3 id="form-titulo">Registrar Casa</h3>
+        <label>Código</label>
+        <input id="codigoCasa" type="number">
+        <label>Nombre propiedad</label>
+        <input id="nombrePropiedad">
+        <label>Población</label>
+        <input id="poblacion">
+        <label>Descripción</label>
+        <textarea id="descripcionGeneral"></textarea>
+        <label>Num comedores</label>
+        <input id="numComedores" type="number" value="0">
+        <label>Plazas garaje</label>
+        <input id="numPlazasGaraje" type="number" value="0">
+
+        <div style="margin-top:10px">
+            <button id="btnGuardar" onclick="guardarCasa()">Guardar</button>
+            <button onclick="cerrarFormulario()">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let editandoCodigo = null;
+
+    function authHeader() {
+        const t = document.getElementById('telefono').value.trim();
+        const p = document.getElementById('password').value;
+        return 'Basic ' + btoa(t + ':' + p);
+    }
+
+    async function cargarMisCasas() {
+        document.getElementById('mensajes').textContent = '';
+        try {
+            const resp = await fetch('/api/propietario/mis-casas', { headers: { 'Authorization': authHeader() } });
+            if (!resp.ok) {
+                const e = await resp.json();
+                document.getElementById('mensajes').textContent = e.error || 'Error al cargar casas';
+                return;
+            }
+            const datos = await resp.json();
+            const lista = document.getElementById('lista');
+            lista.innerHTML = '';
+            datos.forEach(c => {
+                const div = document.createElement('div'); div.className='casa';
+                div.innerHTML = `<div><strong>${c.nombrePropiedad}</strong> — ${c.poblacion} (Código: ${c.codigoCasa})</div>`;
+                const acciones = document.createElement('div'); acciones.className='acciones';
+                const btnEditar = document.createElement('button'); btnEditar.textContent='Editar'; btnEditar.onclick = ()=> abrirEditar(c);
+                const btnEliminar = document.createElement('button'); btnEliminar.textContent='Eliminar'; btnEliminar.onclick = ()=> eliminarCasa(c.codigoCasa);
+                acciones.appendChild(btnEditar); acciones.appendChild(btnEliminar);
+                div.appendChild(acciones);
+                lista.appendChild(div);
+            });
+        } catch (err) {
+            document.getElementById('mensajes').textContent = 'Error de conexión';
+        }
+    }
+
+    function mostrarFormCrear() {
+        editandoCodigo = null;
+        document.getElementById('form-titulo').textContent = 'Registrar Casa';
+        document.getElementById('codigoCasa').disabled = false;
+        document.getElementById('formulario').style.display = 'block';
+    }
+
+    function cerrarFormulario() { document.getElementById('formulario').style.display = 'none'; }
+
+    function abrirEditar(casa) {
+        editandoCodigo = casa.codigoCasa;
+        document.getElementById('form-titulo').textContent = 'Editar Casa ' + casa.codigoCasa;
+        document.getElementById('codigoCasa').value = casa.codigoCasa; document.getElementById('codigoCasa').disabled = true;
+        document.getElementById('nombrePropiedad').value = casa.nombrePropiedad;
+        document.getElementById('poblacion').value = casa.poblacion;
+        document.getElementById('descripcionGeneral').value = casa.descripcion || '';
+        document.getElementById('numComedores').value = casa.numComedores || 0;
+        document.getElementById('numPlazasGaraje').value = casa.plazasGaraje || 0;
+        document.getElementById('formulario').style.display = 'block';
+    }
+
+    async function guardarCasa() {
+        const body = {
+            codigoCasa: parseInt(document.getElementById('codigoCasa').value),
+            nombrePropiedad: document.getElementById('nombrePropiedad').value,
+            poblacion: document.getElementById('poblacion').value,
+            descripcionGeneral: document.getElementById('descripcionGeneral').value,
+            numComedores: parseInt(document.getElementById('numComedores').value) || 0,
+            numPlazasGaraje: parseInt(document.getElementById('numPlazasGaraje').value) || 0
+        };
+
+        const url = editandoCodigo ? `/api/propietario/${editandoCodigo}` : '/api/propietario/casas';
+        const method = editandoCodigo ? 'PUT' : 'POST';
+
+        try {
+            const resp = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json', 'Authorization': authHeader() },
+                body: JSON.stringify(body)
+            });
+
+            const data = await resp.json();
+            if (!resp.ok) {
+                document.getElementById('mensajes').textContent = data.error || 'Error al guardar casa';
+            } else {
+                document.getElementById('mensajes').textContent = editandoCodigo ? 'Casa actualizada' : 'Casa creada';
+                cerrarFormulario();
+                cargarMisCasas();
+            }
+        } catch (err) {
+            document.getElementById('mensajes').textContent = 'Error de conexión';
+        }
+    }
+
+    async function eliminarCasa(codigo) {
+        if (!confirm('¿Eliminar casa ' + codigo + '?')) return;
+        try {
+            const resp = await fetch(`/api/propietario/${codigo}`, { method: 'DELETE', headers: { 'Authorization': authHeader() } });
+            const data = await resp.json();
+            if (!resp.ok) {
+                document.getElementById('mensajes').textContent = data.error || 'Error al eliminar';
+            } else {
+                document.getElementById('mensajes').textContent = data.mensaje || 'Casa eliminada';
+                cargarMisCasas();
+            }
+        } catch (err) {
+            document.getElementById('mensajes').textContent = 'Error de conexión';
+        }
+    }
+</script>
+</body>
+</html>

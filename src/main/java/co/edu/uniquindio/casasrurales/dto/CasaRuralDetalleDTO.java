@@ -9,6 +9,7 @@ import java.util.List;
 public class CasaRuralDetalleDTO {
 
     private int codigoCasa;
+    private String nombrePropiedad;
     private String poblacion;
     private String descripcionGeneral;
     private int numDormitorios;
@@ -27,11 +28,12 @@ public class CasaRuralDetalleDTO {
     public CasaRuralDetalleDTO() {
     }
 
-    public CasaRuralDetalleDTO(int codigoCasa, String poblacion, String descripcionGeneral,
+    public CasaRuralDetalleDTO(int codigoCasa, String nombrePropiedad, String poblacion, String descripcionGeneral,
                               int numDormitorios, int numBanos, int numCocinas,
                               int numComedores, int numPlazasGaraje,
                               String nombrePropietario, String telefonoPropietario) {
         this.codigoCasa = codigoCasa;
+        this.nombrePropiedad = nombrePropiedad;
         this.poblacion = poblacion;
         this.descripcionGeneral = descripcionGeneral;
         this.numDormitorios = numDormitorios;
@@ -50,6 +52,14 @@ public class CasaRuralDetalleDTO {
 
     public void setCodigoCasa(int codigoCasa) {
         this.codigoCasa = codigoCasa;
+    }
+
+    public String getNombrePropiedad() {
+        return nombrePropiedad;
+    }
+
+    public void setNombrePropiedad(String nombrePropiedad) {
+        this.nombrePropiedad = nombrePropiedad;
     }
 
     public String getPoblacion() {

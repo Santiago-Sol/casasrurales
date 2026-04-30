@@ -236,7 +236,7 @@
                 body: JSON.stringify(body)
             });
 
-            const data = await resp.json();
+            let data = null; try { data = await resp.json(); } catch (_) { data = null }
 
             if (resp.ok) {
                 // Guardar resumen y redirigir a pagina de resumen

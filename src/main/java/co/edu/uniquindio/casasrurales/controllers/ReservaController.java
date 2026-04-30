@@ -1,14 +1,9 @@
 package co.edu.uniquindio.casasrurales.controllers;
 
-import co.edu.uniquindio.casasrurales.dto.ReservaRequestDTO;
-import co.edu.uniquindio.casasrurales.dto.ReservaResumenDTO;
-import co.edu.uniquindio.casasrurales.entities.Cliente;
-import co.edu.uniquindio.casasrurales.entities.Habitacion;
-import co.edu.uniquindio.casasrurales.entities.Reserva;
-import co.edu.uniquindio.casasrurales.repositories.ClienteRepository;
-import co.edu.uniquindio.casasrurales.repositories.HabitacionRepository;
-import co.edu.uniquindio.casasrurales.services.SistemaReservas;
-import jakarta.validation.Valid;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -19,9 +14,15 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import co.edu.uniquindio.casasrurales.dto.ReservaRequestDTO;
+import co.edu.uniquindio.casasrurales.dto.ReservaResumenDTO;
+import co.edu.uniquindio.casasrurales.entities.Cliente;
+import co.edu.uniquindio.casasrurales.entities.Habitacion;
+import co.edu.uniquindio.casasrurales.entities.Reserva;
+import co.edu.uniquindio.casasrurales.repositories.ClienteRepository;
+import co.edu.uniquindio.casasrurales.repositories.HabitacionRepository;
+import co.edu.uniquindio.casasrurales.services.SistemaReservas;
+import jakarta.validation.Valid;
 
 /**
  * API REST para la realizacion de reservas.
@@ -166,5 +167,27 @@ public class ReservaController {
         );
 
         return ResponseEntity.ok(resumen);
+    }
+
+    /**
+     * Cancela una reserva si pertenece al cliente autenticado.
+     */
+    @PostMapping("/{numeroReserva}/cancelar")
+    public ResponseEntity<?> cancelarReserva(@PathVariable int numeroReserva, Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Debes iniciar sesion"));
+        }
+
+        Optional<Cliente> clienteOpt = clienteRepository.findByTelefono(authentication.getName());
+        if (clienteOpt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Solo los clientes pueden cancelar reservas"));
+        }
+
+        try {
+            Reserva reserva = sistemaReservas.cancelarReserva(numeroReserva, clienteOpt.get().getIdUsuario());
+            return ResponseEntity.ok(Map.of("mensaje", "Reserva anulada", "numeroReserva", String.valueOf(reserva.getNumeroReserva())));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", ex.getMessage()));
+        }
     }
 }
