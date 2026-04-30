@@ -1,76 +1,48 @@
 import { useState } from 'react'
 import '../styles/formulario.css'
 
-export default function Login({ onLoginSuccess, onRegistroClick }) {
+export default function Login({ onLoginSuccess, onRegistroClick, onVolver }) {
   const [tipoUsuario, setTipoUsuario] = useState('cliente')
   const [usuario, setUsuario] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [cargando, setCargando] = useState(false)
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
+  const handleSubmit = async (event) => {
+    event.preventDefault()
     setError('')
     setCargando(true)
 
     try {
-      let response
-      let datos
+      const esCliente = tipoUsuario === 'cliente'
+      const response = await fetch(esCliente ? '/auth/login/cliente' : '/auth/login/propietario', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify(
+          esCliente
+            ? { email: usuario, contrasena: password }
+            : { nombreCuenta: usuario, contrasena: password }
+        )
+      })
 
-      if (tipoUsuario === 'cliente') {
-        // Login para clientes - usa email (etiquetado como usuario)
-        response = await fetch('/auth/login/cliente', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'same-origin',
-          body: JSON.stringify({ 
-            email: usuario,
-            contrasena: password
-          })
-        })
-
-        if (!response.ok) {
-          const errorData = await response.json()
-          throw new Error(errorData.error || 'Error en las credenciales')
-        }
-
-        datos = await response.json()
-        datos.nombreUsuario = datos.email
-      } else {
-        // Login para propietarios
-        response = await fetch('/auth/login/propietario', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'same-origin',
-          body: JSON.stringify({ 
-            nombreCuenta: usuario,
-            contrasena: password
-          })
-        })
-
-        if (!response.ok) {
-          const errorData = await response.json()
-          throw new Error(errorData.error || 'Error en las credenciales')
-        }
-
-        datos = await response.json()
-        datos.nombreUsuario = datos.nombreCuenta
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Error en las credenciales')
       }
 
-      // Guardar en localStorage
-      localStorage.setItem('usuarioAutenticado', JSON.stringify({
+      const datos = await response.json()
+      const nombreUsuario = esCliente ? datos.email : datos.nombreCuenta
+      const usuarioSesion = {
         idUsuario: datos.idUsuario,
-        nombreUsuario: datos.nombreUsuario,
+        nombreUsuario,
         tipoUsuario
-      }))
+      }
 
-      onLoginSuccess({ 
-        idUsuario: datos.idUsuario, 
-        nombreUsuario: datos.nombreUsuario, 
-        tipoUsuario 
-      })
+      localStorage.setItem('usuarioAutenticado', JSON.stringify(usuarioSesion))
+      onLoginSuccess(usuarioSesion)
     } catch (err) {
-      setError(err.message || 'Error en el inicio de sesión')
+      setError(err.message || 'Error en el inicio de sesion')
     } finally {
       setCargando(false)
     }
@@ -79,26 +51,26 @@ export default function Login({ onLoginSuccess, onRegistroClick }) {
   return (
     <div className="login-container">
       <div className="login-box">
-        <h1>Casas Rurales</h1>
-        <h2>Iniciar Sesión</h2>
-
-        {error && (
-          <div className="error-message">
-            ⚠️ {error}
-          </div>
+        {onVolver && (
+          <button type="button" className="back-to-catalog" onClick={onVolver}>
+            Volver a casas
+          </button>
         )}
+        <h1>Casas Rurales</h1>
+        <h2>Iniciar sesion</h2>
+
+        {error && <div className="error-message">{error}</div>}
 
         <form onSubmit={handleSubmit} autoComplete="off">
-          {/* Campos ocultos para prevenir diálogo de autenticación del navegador */}
-          <input type="text" style={{display: 'none'}} autoComplete="off" value={usuario} onChange={() => {}} />
-          <input type="password" style={{display: 'none'}} autoComplete="off" onChange={() => {}} />
-          
+          <input type="text" hidden autoComplete="off" value={usuario} onChange={() => {}} />
+          <input type="password" hidden autoComplete="off" onChange={() => {}} />
+
           <div className="form-group">
-            <label>Tipo de Usuario</label>
-            <select 
-              value={tipoUsuario} 
-              onChange={(e) => {
-                setTipoUsuario(e.target.value)
+            <label>Tipo de usuario</label>
+            <select
+              value={tipoUsuario}
+              onChange={(event) => {
+                setTipoUsuario(event.target.value)
                 setError('')
               }}
             >
@@ -108,56 +80,50 @@ export default function Login({ onLoginSuccess, onRegistroClick }) {
           </div>
 
           <div className="form-group">
-            <label>
-              {tipoUsuario === 'cliente' ? 'Usuario' : 'Usuario'}
-            </label>
+            <label>{tipoUsuario === 'cliente' ? 'Email' : 'Nombre de cuenta'}</label>
             <input
               type="text"
-              placeholder={tipoUsuario === 'cliente' ? 'Ingrese su usuario' : 'Ingrese su usuario'}
+              placeholder={tipoUsuario === 'cliente' ? 'cliente@correo.com' : 'usuario propietario'}
               value={usuario}
-              onChange={(e) => setUsuario(e.target.value)}
+              onChange={(event) => setUsuario(event.target.value)}
               autoComplete="off"
               required
             />
           </div>
 
           <div className="form-group">
-            <label>Contraseña</label>
+            <label>Contrasena</label>
             <input
               type="password"
-              placeholder="Ingrese su contraseña"
+              placeholder="Ingrese su contrasena"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(event) => setPassword(event.target.value)}
               autoComplete="off"
               required
             />
           </div>
 
-          <button 
-            type="submit" 
-            className="btn-primary"
-            disabled={cargando}
-          >
-            {cargando ? 'Iniciando sesión...' : 'Iniciar Sesión'}
+          <button type="submit" className="btn-primary" disabled={cargando}>
+            {cargando ? 'Iniciando sesion...' : 'Iniciar sesion'}
           </button>
         </form>
 
         <div className="login-links">
-          <p>¿No tienes cuenta?</p>
+          <p>No tienes cuenta?</p>
           <div className="registro-buttons">
-            <button 
+            <button
               type="button"
               className="btn-link cliente"
               onClick={() => onRegistroClick('registro-cliente')}
             >
-              Registrarse como Cliente
+              Registrarse como cliente
             </button>
-            <button 
+            <button
               type="button"
               className="btn-link propietario"
               onClick={() => onRegistroClick('registro-propietario')}
             >
-              Registrarse como Propietario
+              Registrarse como propietario
             </button>
           </div>
         </div>

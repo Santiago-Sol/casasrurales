@@ -1,14 +1,31 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import '../styles/busqueda.css'
+
+const imagenesCasas = [
+  'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=900&q=80',
+  'https://images.unsplash.com/photo-1518780664697-55e3ad937233?auto=format&fit=crop&w=900&q=80',
+  'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=900&q=80',
+  'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=900&q=80'
+]
 
 export default function BusquedaCasas() {
   const [tipoBusqueda, setTipoBusqueda] = useState('poblacion')
-  const [termino, setTermino] = useState('')
+  const [termino, setTermino] = useState('Armenia')
   const [resultados, setResultados] = useState([])
   const [detalle, setDetalle] = useState(null)
   const [cargando, setCargando] = useState(false)
   const [mensaje, setMensaje] = useState('')
   const [tipoMensaje, setTipoMensaje] = useState('info')
+  const [soloCasas, setSoloCasas] = useState(true)
+
+  const casasOrdenadas = useMemo(
+    () => [...resultados].sort((a, b) => a.nombrePropiedad.localeCompare(b.nombrePropiedad)),
+    [resultados]
+  )
+
+  useEffect(() => {
+    buscarPorPoblacion('Armenia')
+  }, [])
 
   const mostrarMensaje = (texto, tipo = 'info') => {
     setMensaje(texto)
@@ -20,41 +37,36 @@ export default function BusquedaCasas() {
     setDetalle(null)
   }
 
-  const buscarPorPoblacion = async () => {
-    if (!termino.trim()) {
-      mostrarMensaje('Por favor ingresa un nombre de poblacion', 'info')
+  const buscarPorPoblacion = async (valor = termino) => {
+    const poblacion = valor.trim()
+    if (!poblacion) {
+      mostrarMensaje('Ingresa una poblacion para buscar casas', 'info')
       return
     }
 
     setCargando(true)
     setMensaje('')
-    setTipoMensaje('info')
     limpiarVista()
 
     try {
       const response = await fetch(
-        `/api/busqueda/por-poblacion?poblacion=${encodeURIComponent(termino.trim())}`,
+        `/api/busqueda/por-poblacion?poblacion=${encodeURIComponent(poblacion)}`,
         { credentials: 'include' }
       )
 
-      if (response.status === 401 || response.status === 403) {
-        mostrarMensaje('Debes iniciar sesion como cliente para buscar casas', 'error')
-        return
-      }
-
       if (response.status === 204) {
-        mostrarMensaje('No se encontraron casas en esa poblacion', 'info')
+        mostrarMensaje('No encontramos casas en esa poblacion', 'info')
         return
       }
 
       if (!response.ok) {
-        mostrarMensaje('Error en la busqueda', 'error')
+        mostrarMensaje('No fue posible cargar las casas disponibles', 'error')
         return
       }
 
       const data = await response.json()
       setResultados(data)
-      mostrarMensaje(`Se encontraron ${data.length} casas`, 'exito')
+      mostrarMensaje(`${data.length} casas rurales encontradas en ${poblacion}`, 'exito')
     } catch (error) {
       mostrarMensaje('Error de conexion con el servidor', 'error')
       console.error(error)
@@ -67,13 +79,12 @@ export default function BusquedaCasas() {
     const codigoNormalizado = String(codigo).trim()
 
     if (!codigoNormalizado) {
-      mostrarMensaje('Por favor ingresa un codigo', 'info')
+      mostrarMensaje('Ingresa el codigo de la casa', 'info')
       return
     }
 
     setCargando(true)
     setMensaje('')
-    setTipoMensaje('info')
     setDetalle(null)
 
     try {
@@ -81,24 +92,19 @@ export default function BusquedaCasas() {
         credentials: 'include'
       })
 
-      if (response.status === 401 || response.status === 403) {
-        mostrarMensaje('Debes iniciar sesion como cliente para consultar detalles', 'error')
-        return
-      }
-
       if (response.status === 404) {
-        mostrarMensaje('No se encontro casa con ese codigo', 'info')
+        mostrarMensaje('No encontramos una casa con ese codigo', 'info')
         return
       }
 
       if (!response.ok) {
-        mostrarMensaje('Error en la busqueda', 'error')
+        mostrarMensaje('No fue posible consultar el detalle', 'error')
         return
       }
 
       const data = await response.json()
       setDetalle(data)
-      mostrarMensaje('Casa encontrada', 'exito')
+      mostrarMensaje('Detalle cargado', 'exito')
     } catch (error) {
       mostrarMensaje('Error de conexion con el servidor', 'error')
       console.error(error)
@@ -116,111 +122,155 @@ export default function BusquedaCasas() {
     buscarPorCodigo()
   }
 
-  const handleKeyDown = (event) => {
-    if (event.key === 'Enter') {
-      handleBuscar()
-    }
-  }
-
   const cambiarTipoBusqueda = (value) => {
     setTipoBusqueda(value)
-    setTermino('')
+    setTermino(value === 'poblacion' ? 'Armenia' : '')
     limpiarVista()
     setMensaje('')
-    setTipoMensaje('info')
+  }
+
+  const imagenCasa = (casa, index = 0) => {
+    if (casa.urlsFotos?.length) return casa.urlsFotos[0]
+    return imagenesCasas[index % imagenesCasas.length]
   }
 
   return (
-    <div className="busqueda-container">
-      <h2>Buscar Casas Rurales</h2>
-
-      <div className="busqueda-options">
-        <label>
-          <input
-            type="radio"
-            value="poblacion"
-            checked={tipoBusqueda === 'poblacion'}
-            onChange={(event) => cambiarTipoBusqueda(event.target.value)}
-          />
-          Buscar por Poblacion
-        </label>
-        <label>
-          <input
-            type="radio"
-            value="codigo"
-            checked={tipoBusqueda === 'codigo'}
-            onChange={(event) => cambiarTipoBusqueda(event.target.value)}
-          />
-          Buscar por Codigo
-        </label>
-      </div>
-
-      <div className="busqueda-input">
-        <input
-          type={tipoBusqueda === 'codigo' ? 'number' : 'text'}
-          placeholder={tipoBusqueda === 'poblacion' ? 'Ej: Salento' : 'Ej: 101'}
-          value={termino}
-          onChange={(event) => setTermino(event.target.value)}
-          onKeyDown={handleKeyDown}
-        />
-        <button onClick={handleBuscar} disabled={cargando}>
-          {cargando ? 'Buscando...' : 'Buscar'}
-        </button>
-      </div>
-
-      {mensaje && (
-        <div className={`mensaje ${tipoMensaje}`}>
-          {mensaje}
+    <main className="catalog-page">
+      <section className="catalog-hero">
+        <div>
+          <p className="breadcrumb">Inicio / Casas rurales / Quindio</p>
+          <h1>Casas rurales en Armenia</h1>
+          <p className="hero-copy">
+            Encuentra estadias tranquilas, verdes y listas para reservar cerca del paisaje cafetero.
+          </p>
         </div>
-      )}
+        <div className="hero-actions">
+          <button className="outline-action">Ver mapa</button>
+          <button className="solid-action">Guardar busqueda</button>
+        </div>
+      </section>
 
-      {resultados.length > 0 && (
-        <div className="resultados">
-          <h3>Resultados ({resultados.length})</h3>
-          <div className="casas-grid">
-            {resultados.map((casa) => (
-              <div
-                key={casa.codigoCasa}
-                className="casa-card"
-                onClick={() => buscarPorCodigo(casa.codigoCasa)}
+      <section className="catalog-layout">
+        <aside className="filters-panel">
+          <div className="filter-block">
+            <h2>Ubicacion y tipo</h2>
+            <input
+              type={tipoBusqueda === 'codigo' ? 'number' : 'text'}
+              placeholder={tipoBusqueda === 'poblacion' ? 'Armenia' : 'Codigo de casa'}
+              value={termino}
+              onChange={(event) => setTermino(event.target.value)}
+              onKeyDown={(event) => event.key === 'Enter' && handleBuscar()}
+            />
+          </div>
+
+          <div className="filter-block">
+            <h3>Buscar por</h3>
+            <div className="segmented-control">
+              <button
+                className={tipoBusqueda === 'poblacion' ? 'selected' : ''}
+                onClick={() => cambiarTipoBusqueda('poblacion')}
               >
-                <h4>{casa.nombrePropiedad}</h4>
-                <p><strong>Codigo:</strong> {casa.codigoCasa}</p>
-                <p><strong>Poblacion:</strong> {casa.poblacion}</p>
-                <p><strong>Propietario:</strong> {casa.nombrePropietario}</p>
-                <p><strong>Habitaciones:</strong> {casa.numDormitorios}</p>
-                <p><strong>Banos:</strong> {casa.numBanos}</p>
-                <p><strong>Cocinas:</strong> {casa.numCocinas}</p>
-                <p><strong>Descripcion:</strong> {casa.descripcionGeneral}</p>
-              </div>
+                Poblacion
+              </button>
+              <button
+                className={tipoBusqueda === 'codigo' ? 'selected' : ''}
+                onClick={() => cambiarTipoBusqueda('codigo')}
+              >
+                Codigo
+              </button>
+            </div>
+          </div>
+
+          <div className="filter-block">
+            <h3>Oferta</h3>
+            <div className="offer-grid">
+              <button>Arrendar</button>
+              <button className="active">Reservar</button>
+            </div>
+          </div>
+
+          <div className="filter-block">
+            <h3>Tipo de inmueble</h3>
+            <label className="check-row">
+              <span>Casa rural</span>
+              <input
+                type="checkbox"
+                checked={soloCasas}
+                onChange={(event) => setSoloCasas(event.target.checked)}
+              />
+            </label>
+          </div>
+
+          <button className="search-button" onClick={handleBuscar} disabled={cargando}>
+            {cargando ? 'Buscando...' : 'Buscar casas'}
+          </button>
+        </aside>
+
+        <section className="results-panel">
+          <div className="credit-strip">
+            <strong>Escapadas verdes en el Quindio</strong>
+            <span>Casas con espacios familiares, cocina y zonas para descansar.</span>
+          </div>
+
+          {mensaje && <div className={`mensaje ${tipoMensaje}`}>{mensaje}</div>}
+
+          <div className="results-toolbar">
+            <h2>{casasOrdenadas.length || 0} casas disponibles</h2>
+            <select aria-label="Ordenar resultados">
+              <option>Ordenar por recomendadas</option>
+              <option>Nombre A-Z</option>
+              <option>Mas habitaciones</option>
+            </select>
+          </div>
+
+          <div className="property-grid">
+            {casasOrdenadas.map((casa, index) => (
+              <article className="property-card" key={casa.codigoCasa}>
+                <button className="image-button" onClick={() => buscarPorCodigo(casa.codigoCasa)}>
+                  <img src={imagenCasa(casa, index)} alt={casa.nombrePropiedad} />
+                  <span className="badge">Disponible</span>
+                  <span className="badge badge-yellow">Rural</span>
+                </button>
+                <div className="property-body">
+                  <p className="location">{casa.poblacion}</p>
+                  <h3>{casa.nombrePropiedad}</h3>
+                  <p className="description">{casa.descripcionGeneral || 'Casa rural lista para una estadia tranquila.'}</p>
+                  <div className="spec-row">
+                    <span>{casa.numDormitorios} hab.</span>
+                    <span>{casa.numBanos} banos</span>
+                    <span>{casa.numCocinas} cocina</span>
+                  </div>
+                  <button className="contact-button" onClick={() => buscarPorCodigo(casa.codigoCasa)}>
+                    Ver detalle
+                  </button>
+                </div>
+              </article>
             ))}
           </div>
-        </div>
-      )}
+        </section>
+      </section>
 
       {detalle && (
-        <div className="detalle">
-          <h3>Detalles de la Casa</h3>
-          <div className="detalle-content">
-            <div className="detalle-info">
-              <h4>{detalle.nombrePropiedad}</h4>
-              <p><strong>Codigo:</strong> {detalle.codigoCasa}</p>
-              <p><strong>Poblacion:</strong> {detalle.poblacion}</p>
-              <p><strong>Descripcion:</strong> {detalle.descripcionGeneral}</p>
-              <p><strong>Propietario:</strong> {detalle.nombrePropietario}</p>
-              <p><strong>Telefono:</strong> {detalle.telefonoPropietario}</p>
+        <div className="detail-overlay" onClick={() => setDetalle(null)}>
+          <section className="detail-modal" onClick={(event) => event.stopPropagation()}>
+            <button className="close-detail" onClick={() => setDetalle(null)}>x</button>
+            <img src={imagenCasa(detalle)} alt={detalle.nombrePropiedad} />
+            <div className="detail-content">
+              <p className="location">{detalle.poblacion}</p>
+              <h2>{detalle.nombrePropiedad}</h2>
+              <p>{detalle.descripcionGeneral || 'Casa rural con espacios completos para descansar.'}</p>
+              <div className="detail-specs">
+                <span>{detalle.numDormitorios} habitaciones</span>
+                <span>{detalle.numBanos} banos</span>
+                <span>{detalle.numCocinas} cocinas</span>
+                <span>{detalle.numPlazasGaraje} garajes</span>
+              </div>
+              <p className="owner">Propietario: {detalle.nombrePropietario}</p>
+              <p className="owner">Telefono: {detalle.telefonoPropietario}</p>
             </div>
-            <div className="detalle-specs">
-              <h4>Especificaciones</h4>
-              <p><strong>Habitaciones:</strong> {detalle.numDormitorios}</p>
-              <p><strong>Banos:</strong> {detalle.numBanos}</p>
-              <p><strong>Cocinas:</strong> {detalle.numCocinas}</p>
-              <p><strong>Comedores:</strong> {detalle.numComedores}</p>
-              <p><strong>Plazas de garaje:</strong> {detalle.numPlazasGaraje}</p>
-            </div>
-          </div>
+          </section>
         </div>
       )}
-    </div>
+    </main>
   )
 }

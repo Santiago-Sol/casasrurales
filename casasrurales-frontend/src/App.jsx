@@ -7,20 +7,21 @@ import BusquedaCasas from './components/BusquedaCasas'
 import DashboardPropietario from './components/DashboardPropietario'
 
 function App() {
-  const [seccionActiva, setSeccionActiva] = useState('login')
+  const [seccionActiva, setSeccionActiva] = useState('busqueda')
   const [usuarioAutenticado, setUsuarioAutenticado] = useState(null)
 
   useEffect(() => {
     const usuarioGuardado = localStorage.getItem('usuarioAutenticado')
     if (usuarioGuardado) {
-      setUsuarioAutenticado(JSON.parse(usuarioGuardado))
-      setSeccionActiva('inicio')
+      const usuario = JSON.parse(usuarioGuardado)
+      setUsuarioAutenticado(usuario)
+      setSeccionActiva(usuario.tipoUsuario === 'propietario' ? 'dashboard-propietario' : 'busqueda')
     }
   }, [])
 
   const handleLoginSuccess = (datosUsuario) => {
     setUsuarioAutenticado(datosUsuario)
-    setSeccionActiva('inicio')
+    setSeccionActiva(datosUsuario.tipoUsuario === 'propietario' ? 'dashboard-propietario' : 'busqueda')
   }
 
   const handleRegistroExitoso = () => {
@@ -38,119 +39,103 @@ function App() {
     } finally {
       localStorage.removeItem('usuarioAutenticado')
       setUsuarioAutenticado(null)
-      setSeccionActiva('login')
+      setSeccionActiva('busqueda')
     }
-  }
-
-  if (!usuarioAutenticado) {
-    if (seccionActiva === 'registro-cliente' || seccionActiva === 'registro-propietario') {
-      return (
-        <div className="app">
-          <main className="main-content">
-            {seccionActiva === 'registro-propietario' && (
-              <RegistroPropietario
-                onRegistroExitoso={handleRegistroExitoso}
-                onVolver={() => setSeccionActiva('login')}
-              />
-            )}
-            {seccionActiva === 'registro-cliente' && (
-              <RegistroCliente
-                onRegistroExitoso={handleRegistroExitoso}
-                onVolver={() => setSeccionActiva('login')}
-              />
-            )}
-          </main>
-        </div>
-      )
-    }
-
-    return <Login onLoginSuccess={handleLoginSuccess} onRegistroClick={setSeccionActiva} />
   }
 
   const esPropietario = usuarioAutenticado?.tipoUsuario === 'propietario'
 
+  const renderContenido = () => {
+    if (seccionActiva === 'login') {
+      return (
+        <Login
+          onLoginSuccess={handleLoginSuccess}
+          onRegistroClick={setSeccionActiva}
+          onVolver={() => setSeccionActiva('busqueda')}
+        />
+      )
+    }
+
+    if (seccionActiva === 'registro-propietario') {
+      return (
+        <main className="main-content main-content-form">
+          <RegistroPropietario
+            onRegistroExitoso={handleRegistroExitoso}
+            onVolver={() => setSeccionActiva('login')}
+          />
+        </main>
+      )
+    }
+
+    if (seccionActiva === 'registro-cliente') {
+      return (
+        <main className="main-content main-content-form">
+          <RegistroCliente
+            onRegistroExitoso={handleRegistroExitoso}
+            onVolver={() => setSeccionActiva('login')}
+          />
+        </main>
+      )
+    }
+
+    if (seccionActiva === 'dashboard-propietario' && esPropietario) {
+      return (
+        <main className="main-content">
+          <DashboardPropietario />
+        </main>
+      )
+    }
+
+    return <BusquedaCasas />
+  }
+
   return (
     <div className="app">
-      <nav className="navbar">
-        <div className="navbar-container">
-          <h1 onClick={() => setSeccionActiva('inicio')} style={{ cursor: 'pointer' }}>
-            Casas Rurales
-          </h1>
-          <ul className="nav-links">
-            <li>
+      {seccionActiva !== 'login' && (
+        <nav className="navbar">
+          <div className="navbar-container">
+            <button className="brand" onClick={() => setSeccionActiva('busqueda')}>
+              <span className="brand-mark">CR</span>
+              <span>
+                <strong>Casas Rurales</strong>
+                <small>Armenia y Quindio</small>
+              </span>
+            </button>
+
+            <div className="nav-actions">
               <button
-                onClick={() => setSeccionActiva('inicio')}
-                className={seccionActiva === 'inicio' ? 'active' : ''}
+                className={seccionActiva === 'busqueda' ? 'nav-button active' : 'nav-button'}
+                onClick={() => setSeccionActiva('busqueda')}
               >
-                Inicio
+                Casas
               </button>
-            </li>
-            {!esPropietario && (
-              <li>
+              {esPropietario && (
                 <button
-                  onClick={() => setSeccionActiva('busqueda')}
-                  className={seccionActiva === 'busqueda' ? 'active' : ''}
-                >
-                  Buscar Casas
-                </button>
-              </li>
-            )}
-            {esPropietario && (
-              <li>
-                <button
+                  className={seccionActiva === 'dashboard-propietario' ? 'nav-button active' : 'nav-button'}
                   onClick={() => setSeccionActiva('dashboard-propietario')}
-                  className={seccionActiva === 'dashboard-propietario' ? 'active' : ''}
                 >
-                  Mi Dashboard
+                  Mi dashboard
                 </button>
-              </li>
-            )}
-            <li>
-              <button
-                onClick={handleLogout}
-                className="btn-logout"
-                title={`Cerrar sesion (${usuarioAutenticado?.nombreUsuario})`}
-              >
-                Cerrar Sesion ({usuarioAutenticado?.nombreUsuario})
-              </button>
-            </li>
-          </ul>
-        </div>
-      </nav>
+              )}
+              {usuarioAutenticado ? (
+                <button
+                  onClick={handleLogout}
+                  className="session-button"
+                  title={`Cerrar sesion (${usuarioAutenticado?.nombreUsuario})`}
+                >
+                  Salir
+                </button>
+              ) : (
+                <button className="session-button" onClick={() => setSeccionActiva('login')}>
+                  Ingresar
+                </button>
+              )}
+            </div>
+          </div>
+        </nav>
+      )}
 
-      <main className="main-content">
-        {seccionActiva === 'inicio' && (
-          <section className="dashboard-page">
-            {esPropietario ? (
-              <div className="dashboard-content">
-                <h2>Bienvenido, Propietario: {usuarioAutenticado?.nombreUsuario}</h2>
-                <p>Administra tus casas rurales desde aqui</p>
-                <div className="btn-group">
-                  <button
-                    className="btn-primary"
-                    onClick={() => setSeccionActiva('dashboard-propietario')}
-                  >
-                    Ir a Mi Dashboard
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="dashboard-content">
-                <h2>Bienvenido, {usuarioAutenticado?.nombreUsuario}</h2>
-                <p>Busca y reserva las mejores casas rurales</p>
-                <div className="btn-group">
-                  <button className="btn-primary" onClick={() => setSeccionActiva('busqueda')}>
-                    Buscar Casas
-                  </button>
-                </div>
-              </div>
-            )}
-          </section>
-        )}
-
-        {seccionActiva === 'busqueda' && <BusquedaCasas />}
-        {seccionActiva === 'dashboard-propietario' && <DashboardPropietario />}
-      </main>
+      {renderContenido()}
     </div>
   )
 }

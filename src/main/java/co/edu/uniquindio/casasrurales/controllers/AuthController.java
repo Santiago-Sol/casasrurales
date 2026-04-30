@@ -23,10 +23,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 
-/**
- * API REST encargada del flujo de autenticación y registro.
- * Proporciona endpoints para login, registro de propietarios y clientes.
- */
 @RestController
 public class AuthController {
 
@@ -36,12 +32,6 @@ public class AuthController {
         this.autenticacionService = autenticacionService;
     }
 
-    /**
-     * Registra un nuevo propietario en el sistema.
-     * 
-     * @param registroPropietarioForm datos del propietario
-     * @return respuesta con mensaje de éxito o error
-     */
     @PostMapping("/auth/registro/propietario")
     public ResponseEntity<Map<String, String>> registrarPropietario(
             @Valid @RequestBody RegistroPropietarioForm registroPropietarioForm) {
@@ -55,12 +45,6 @@ public class AuthController {
         }
     }
 
-    /**
-     * Registra un nuevo cliente en el sistema.
-     * 
-     * @param registroClienteForm datos del cliente
-     * @return respuesta con mensaje de éxito o error
-     */
     @PostMapping("/auth/registro/cliente")
     public ResponseEntity<Map<String, String>> registrarCliente(
             @Valid @RequestBody RegistroClienteForm registroClienteForm) {
@@ -74,12 +58,6 @@ public class AuthController {
         }
     }
 
-    /**
-     * Obtiene información del usuario autenticado.
-     * 
-     * @param authentication información del usuario actual
-     * @return información del usuario autenticado
-     */
     @GetMapping("/auth/me")
     public ResponseEntity<Map<String, Object>> getUsuarioActual(Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated()) {
@@ -90,21 +68,12 @@ public class AuthController {
         boolean esPropietario = authentication.getAuthorities().stream()
                 .anyMatch(authority -> authority.getAuthority().equals("ROLE_PROPIETARIO"));
 
-        Map<String, Object> respuesta = Map.of(
+        return ResponseEntity.ok(Map.of(
                 "usuario", authentication.getName(),
                 "rol", esPropietario ? "PROPIETARIO" : "CLIENTE",
-                "autenticado", true
-        );
-        
-        return ResponseEntity.ok(respuesta);
+                "autenticado", true));
     }
 
-    /**
-     * Autentica un propietario con nombre de cuenta y contraseña.
-     * 
-     * @param loginData mapa con nombreCuenta y contrasena
-     * @return información del propietario autenticado
-     */
     @PostMapping("/auth/login/propietario")
     public ResponseEntity<Map<String, Object>> loginPropietario(
             @RequestBody Map<String, String> loginData,
@@ -115,26 +84,42 @@ public class AuthController {
 
             if (nombreCuenta == null || contrasena == null) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body(Map.of("error", "Nombre de cuenta y contraseña son requeridos"));
+                        .body(Map.of("error", "Nombre de cuenta y contrasena son requeridos"));
             }
 
             int idPropietario = autenticacionService.autenticarPropietario(nombreCuenta, contrasena);
-            Authentication authentication = new UsernamePasswordAuthenticationToken(
-                    String.valueOf(idPropietario),
-                    null,
-                    List.of(new SimpleGrantedAuthority("ROLE_PROPIETARIO")));
-            SecurityContext context = SecurityContextHolder.createEmptyContext();
-            context.setAuthentication(authentication);
-            SecurityContextHolder.setContext(context);
-
-            HttpSession session = request.getSession(true);
-            session.setAttribute("SPRING_SECURITY_CONTEXT", context);
+            autenticarEnSesion(request, idPropietario, "ROLE_PROPIETARIO");
 
             return ResponseEntity.ok(Map.of(
                     "idUsuario", idPropietario,
                     "nombreCuenta", nombreCuenta,
-                    "rol", "PROPIETARIO"
-            ));
+                    "rol", "PROPIETARIO"));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", ex.getMessage()));
+        }
+    }
+
+    @PostMapping("/auth/login/cliente")
+    public ResponseEntity<Map<String, Object>> loginCliente(
+            @RequestBody Map<String, String> loginData,
+            HttpServletRequest request) {
+        try {
+            String email = loginData.get("email");
+            String contrasena = loginData.get("contrasena");
+
+            if (email == null || contrasena == null) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("error", "Usuario y contrasena son requeridos"));
+            }
+
+            int idCliente = autenticacionService.autenticarCliente(email, contrasena);
+            autenticarEnSesion(request, idCliente, "ROLE_CLIENTE");
+
+            return ResponseEntity.ok(Map.of(
+                    "idUsuario", idCliente,
+                    "email", email,
+                    "rol", "CLIENTE"));
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("error", ex.getMessage()));
@@ -153,58 +138,16 @@ public class AuthController {
                 .body(Map.of("mensaje", "Sesion cerrada exitosamente"));
     }
 
-    /**
-     * Autentica un cliente con email y contraseña.
-     * 
-     * @param loginData mapa con email y contrasena
-     * @return información del cliente autenticado
-     */
-    @PostMapping("/auth/login/cliente")
-    public ResponseEntity<Map<String, Object>> loginCliente(
-            @RequestBody Map<String, String> loginData,
-            HttpServletRequest request) {
-        try {
-            String email = loginData.get("email");
-            String contrasena = loginData.get("contrasena");
-
-            if (email == null || contrasena == null) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body(Map.of("error", "Usuario y contraseña son requeridos"));
-            }
-
-            int idCliente = autenticacionService.autenticarCliente(email, contrasena);
-            Authentication authentication = new UsernamePasswordAuthenticationToken(
-                    String.valueOf(idCliente),
-                    null,
-                    List.of(new SimpleGrantedAuthority("ROLE_CLIENTE")));
-            SecurityContext context = SecurityContextHolder.createEmptyContext();
-            context.setAuthentication(authentication);
-            SecurityContextHolder.setContext(context);
-
-            HttpSession session = request.getSession(true);
-            session.setAttribute("SPRING_SECURITY_CONTEXT", context);
-
-            // Crear autenticación y sesión similar al login de propietario
-            Authentication authentication = new UsernamePasswordAuthenticationToken(
-                String.valueOf(idCliente),
+    private void autenticarEnSesion(HttpServletRequest request, int idUsuario, String rol) {
+        Authentication authentication = new UsernamePasswordAuthenticationToken(
+                String.valueOf(idUsuario),
                 null,
-                List.of(new SimpleGrantedAuthority("ROLE_CLIENTE")));
-            SecurityContext context = SecurityContextHolder.createEmptyContext();
-            context.setAuthentication(authentication);
-            SecurityContextHolder.setContext(context);
+                List.of(new SimpleGrantedAuthority(rol)));
+        SecurityContext context = SecurityContextHolder.createEmptyContext();
+        context.setAuthentication(authentication);
+        SecurityContextHolder.setContext(context);
 
-            // Obtener/crear sesión y almacenar el contexto de seguridad
-            HttpSession session = ((jakarta.servlet.http.HttpServletRequest) ((org.springframework.web.context.request.ServletRequestAttributes) org.springframework.web.context.request.RequestContextHolder.currentRequestAttributes()).getRequest()).getSession(true);
-            session.setAttribute("SPRING_SECURITY_CONTEXT", context);
-
-            return ResponseEntity.ok(Map.of(
-                "idUsuario", idCliente,
-                "email", email,
-                "rol", "CLIENTE"
-            ));
-        } catch (IllegalArgumentException ex) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("error", ex.getMessage()));
-        }
+        HttpSession session = request.getSession(true);
+        session.setAttribute("SPRING_SECURITY_CONTEXT", context);
     }
 }

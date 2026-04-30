@@ -53,12 +53,15 @@ public class Habitacion {
     private List<Reserva> reservas = new ArrayList<>();
 
     public Habitacion() {
+        this("HAB-SIN-ASIGNAR", 1, TipoCama.SENCILLA, false);
     }
 
     public Habitacion(String codigoHabitacion, int numeroCamas, TipoCama tipoCama, boolean tieneBano) {
-        this.codigoHabitacion = codigoHabitacion;
-        this.numeroCamas = numeroCamas;
-        this.tipoCama = tipoCama;
+        this.codigoHabitacion = codigoHabitacion == null || codigoHabitacion.isBlank()
+                ? "HAB-SIN-ASIGNAR"
+                : codigoHabitacion;
+        this.numeroCamas = Math.max(1, numeroCamas);
+        this.tipoCama = tipoCama == null ? TipoCama.SENCILLA : tipoCama;
         this.tieneBano = tieneBano;
     }
 

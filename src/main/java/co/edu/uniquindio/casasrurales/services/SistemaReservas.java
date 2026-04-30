@@ -1,5 +1,6 @@
 package co.edu.uniquindio.casasrurales.services;
 
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
@@ -72,10 +73,9 @@ public class SistemaReservas {
 
     public Reserva realizarReserva(int codigoCasa, Date fechaEntrada, int numeroNoches, List<Habitacion> habitaciones) {
         CasaRural casa = Objects.requireNonNull(buscarCasaPorCodigo(codigoCasa), "La casa no existe");
-        String disponibilidad = casa.consultarDisponibilidad(fechaEntrada, numeroNoches);
-        if (!"LIBRE".equals(disponibilidad)) {
-            throw new IllegalStateException("La casa no esta disponible");
-        }
+        validarCasaReservable(casa);
+        validarFechasReserva(fechaEntrada, numeroNoches);
+        validarDisponibilidad(casa, fechaEntrada, numeroNoches);
 
         TipoReserva tipoReserva = (habitaciones == null || habitaciones.isEmpty())
                 ? TipoReserva.CASA_ENTERA
@@ -103,10 +103,10 @@ public class SistemaReservas {
     public Reserva realizarReserva(int codigoCasa, Cliente cliente, Date fechaEntrada, int numeroNoches,
                                    List<Habitacion> habitaciones, double importeTotal) {
         CasaRural casa = Objects.requireNonNull(buscarCasaPorCodigo(codigoCasa), "La casa no existe");
-        String disponibilidad = casa.consultarDisponibilidad(fechaEntrada, numeroNoches);
-        if (!"LIBRE".equals(disponibilidad)) {
-            throw new IllegalStateException("La casa no esta disponible");
-        }
+        validarCasaReservable(casa);
+        validarFechasReserva(fechaEntrada, numeroNoches);
+        validarImporte(importeTotal);
+        validarDisponibilidad(casa, fechaEntrada, numeroNoches);
 
         TipoReserva tipoReserva = (habitaciones == null || habitaciones.isEmpty())
                 ? TipoReserva.CASA_ENTERA
@@ -139,7 +139,7 @@ public class SistemaReservas {
                 .formatted(casaRuralRepository.count(), reservaRepository.count());
     }
     public List<Reserva> getReservasPorCliente(int idCliente) {
-        return reservaRepository.findByCliente_IdUsuario(idCliente);
+        return reservaRepository.findByClienteIdUsuario(idCliente);
     }
     public Reserva buscarReservaPorNumero(int numeroReserva) {
         return reservaRepository.findById(numeroReserva).orElse(null);
@@ -167,6 +167,53 @@ public class SistemaReservas {
 
         reserva.cancelar();
         return reservaRepository.save(reserva);
+    }
+
+    private void validarCasaReservable(CasaRural casa) {
+        if (!casa.isActiva()) {
+            throw new IllegalStateException("La casa no esta activa y no puede ser reservada");
+        }
+
+        if (!casa.esValida()) {
+            throw new IllegalStateException("La casa no cumple los requisitos minimos para ser reservada");
+        }
+    }
+
+    private void validarFechasReserva(Date fechaEntrada, int numeroNoches) {
+        if (fechaEntrada == null) {
+            throw new IllegalArgumentException("La fecha de entrada es obligatoria");
+        }
+
+        Calendar hoy = Calendar.getInstance();
+        hoy.set(Calendar.HOUR_OF_DAY, 0);
+        hoy.set(Calendar.MINUTE, 0);
+        hoy.set(Calendar.SECOND, 0);
+        hoy.set(Calendar.MILLISECOND, 0);
+
+        if (fechaEntrada.before(hoy.getTime())) {
+            throw new IllegalArgumentException("La fecha de entrada no puede ser en el pasado");
+        }
+
+        if (numeroNoches < 1) {
+            throw new IllegalArgumentException("El numero de noches debe ser al menos 1");
+        }
+    }
+
+    private void validarImporte(double importeTotal) {
+        if (importeTotal <= 0) {
+            throw new IllegalArgumentException("El importe total debe ser mayor a cero");
+        }
+    }
+
+    private void validarDisponibilidad(CasaRural casa, Date fechaEntrada, int numeroNoches) {
+        String disponibilidad = casa.consultarDisponibilidad(fechaEntrada, numeroNoches);
+        if ("RESERVADA".equals(disponibilidad)) {
+            throw new IllegalStateException("La casa ya tiene una reserva para las fechas solicitadas");
+        }
+
+        if (!"LIBRE".equals(disponibilidad)) {
+            throw new IllegalStateException("La casa no esta disponible");
+        }
     }
 
 }

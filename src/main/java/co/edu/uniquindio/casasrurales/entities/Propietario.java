@@ -44,9 +44,9 @@ public class Propietario extends Usuario {
 
     public Propietario(String telefono, String nombreCuenta, String contrasena, String numeroCuentaBancaria) {
         super(telefono);
-        this.nombreCuenta = nombreCuenta;
-        this.contrasena = contrasena;
-        this.numeroCuentaBancaria = numeroCuentaBancaria;
+        this.nombreCuenta = valorONoAsignado(nombreCuenta);
+        this.contrasena = valorONoAsignado(contrasena);
+        this.numeroCuentaBancaria = valorONoAsignado(numeroCuentaBancaria);
     }
 
     public String getNombreCuenta() {
@@ -110,5 +110,9 @@ public class Propietario extends Usuario {
 
     public void anularReserva(Reserva reserva) {
         reserva.cancelar();
+    }
+
+    private String valorONoAsignado(String valor) {
+        return valor == null || valor.isBlank() ? "NO_ASIGNADO" : valor;
     }
 }

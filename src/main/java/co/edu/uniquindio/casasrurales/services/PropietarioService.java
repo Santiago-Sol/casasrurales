@@ -1,7 +1,12 @@
 package co.edu.uniquindio.casasrurales.services;
 
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
 import co.edu.uniquindio.casasrurales.dto.CasaRuralFormDTO;
 import co.edu.uniquindio.casasrurales.dto.CasaRuralPropietarioDTO;
+import co.edu.uniquindio.casasrurales.dto.RegistroCasaForm;
 import co.edu.uniquindio.casasrurales.entities.Bano;
 import co.edu.uniquindio.casasrurales.entities.CasaRural;
 import co.edu.uniquindio.casasrurales.entities.Cocina;
@@ -13,6 +18,8 @@ import co.edu.uniquindio.casasrurales.enums.TipoCama;
 import co.edu.uniquindio.casasrurales.repositories.CasaRuralRepository;
 import co.edu.uniquindio.casasrurales.repositories.PropietarioRepository;
 import co.edu.uniquindio.casasrurales.repositories.ReservaRepository;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Servicio que maneja operaciones relacionadas con propietarios.

@@ -362,3 +362,87 @@
   }
 }
 
+/* Nueva paleta amarillo/verde */
+.formulario-container,
+.login-container {
+  background:
+    linear-gradient(rgba(16, 35, 18, 0.58), rgba(16, 35, 18, 0.58)),
+    url("https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1600&q=80");
+  background-position: center;
+  background-size: cover;
+}
+
+.formulario-container-card,
+.login-box {
+  border: 1px solid #d8e4c2;
+  border-radius: 8px;
+  box-shadow: 0 18px 44px rgba(16, 35, 18, 0.28);
+}
+
+.formulario-container-card h2,
+.login-box h1,
+.login-box h2 {
+  background: none;
+  color: #17351f;
+  -webkit-text-fill-color: initial;
+}
+
+.form-group label,
+.login-box .form-group label {
+  color: #17351f;
+}
+
+.form-group input,
+.form-group select,
+.login-box .form-group input,
+.login-box .form-group select {
+  border-color: #b8c9a3;
+  border-radius: 8px;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.login-box .form-group input:focus,
+.login-box .form-group select:focus {
+  border-color: #1f6f3d;
+  box-shadow: 0 0 0 3px rgba(31, 111, 61, 0.14);
+}
+
+.formulario-container-card button,
+.login-box .btn-primary {
+  background: #1f6f3d;
+  border-radius: 8px;
+}
+
+.formulario-container-card button:hover:not(:disabled),
+.login-box .btn-primary:hover:not(:disabled) {
+  background: #185831;
+  box-shadow: 0 10px 20px rgba(31, 111, 61, 0.26);
+}
+
+.btn-volver,
+.back-to-catalog {
+  background: white !important;
+  border: 1px solid #1f6f3d !important;
+  border-radius: 8px !important;
+  color: #1f6f3d !important;
+  font-weight: 800;
+}
+
+.back-to-catalog {
+  margin-bottom: 18px;
+  padding: 10px 14px;
+}
+
+.registro-buttons .btn-link.cliente,
+.registro-buttons .btn-link.propietario {
+  border-color: #1f6f3d;
+  color: #1f6f3d;
+}
+
+.registro-buttons .btn-link.cliente:hover,
+.registro-buttons .btn-link.propietario:hover {
+  background: #edf6dc;
+  box-shadow: 0 8px 18px rgba(31, 111, 61, 0.16);
+}
+

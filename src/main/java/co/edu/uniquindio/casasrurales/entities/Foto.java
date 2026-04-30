@@ -33,10 +33,11 @@ public class Foto {
     private CasaRural casaRural;
 
     public Foto() {
+        this("SIN_RUTA", null);
     }
 
     public Foto(String ruta, String descripcion) {
-        this.ruta = ruta;
+        this.ruta = ruta == null || ruta.isBlank() ? "SIN_RUTA" : ruta;
         this.descripcion = descripcion;
     }
 
