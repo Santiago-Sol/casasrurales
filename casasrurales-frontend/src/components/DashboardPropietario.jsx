@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import '../styles/dashboard.css'
+import GestionPaquetes from './GestionPaquetes'
 
 const formularioInicial = {
   codigoCasa: '',
@@ -25,6 +26,7 @@ export default function DashboardPropietario() {
   const [casaEditando, setCasaEditando] = useState(null)
   const [formulario, setFormulario] = useState(formularioInicial)
   const [guardando, setGuardando] = useState(false)
+  const [casaGestionandoPaquetes, setCasaGestionandoPaquetes] = useState(null)
 
   useEffect(() => {
     obtenerMisCasas()
@@ -284,6 +286,13 @@ export default function DashboardPropietario() {
                     >
                       Editar
                     </button>
+                    <button
+                      className="btn-primary"
+                      onClick={() => setCasaGestionandoPaquetes(casa)}
+                      disabled={!casa.activa}
+                    >
+                      Paquetes
+                    </button>
                     {casa.activa ? (
                       <button
                         className="btn-danger"
@@ -483,6 +492,13 @@ export default function DashboardPropietario() {
             </div>
           </div>
         </div>
+      )}
+
+      {casaGestionandoPaquetes && (
+        <GestionPaquetes
+          casa={casaGestionandoPaquetes}
+          onClose={() => setCasaGestionandoPaquetes(null)}
+        />
       )}
     </div>
   )

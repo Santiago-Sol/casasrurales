@@ -61,7 +61,7 @@ public class ReservaController {
                     .body(Map.of("error", "Debes iniciar sesion para realizar una reserva"));
         }
 
-        Optional<Cliente> clienteOpt = clienteRepository.findByTelefono(authentication.getName());
+        Optional<Cliente> clienteOpt = clienteRepository.findById(Integer.parseInt(authentication.getName()));
         if (clienteOpt.isEmpty()) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(Map.of("error", "Solo los clientes pueden realizar reservas"));
@@ -111,7 +111,7 @@ public class ReservaController {
                     .body(Map.of("error", "Debes iniciar sesion"));
         }
 
-        Optional<Cliente> clienteOpt = clienteRepository.findByTelefono(authentication.getName());
+        Optional<Cliente> clienteOpt = clienteRepository.findById(Integer.parseInt(authentication.getName()));
         if (clienteOpt.isEmpty()) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(Map.of("error", "Solo los clientes pueden consultar reservas"));
@@ -178,7 +178,7 @@ public class ReservaController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Debes iniciar sesion"));
         }
 
-        Optional<Cliente> clienteOpt = clienteRepository.findByTelefono(authentication.getName());
+        Optional<Cliente> clienteOpt = clienteRepository.findById(Integer.parseInt(authentication.getName()));
         if (clienteOpt.isEmpty()) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Solo los clientes pueden cancelar reservas"));
         }

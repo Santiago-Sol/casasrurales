@@ -227,4 +227,84 @@ public class PropietarioController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", ex.getMessage()));
         }
     }
+
+    /**
+     * HU-05: Obtener paquetes de alquiler de una casa.
+     */
+    @GetMapping("/mis-casas/{codigoCasa}/paquetes")
+    public ResponseEntity<?> obtenerPaquetesCasa(
+            @PathVariable int codigoCasa,
+            Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Debe estar autenticado"));
+        }
+        try {
+            int idPropietario = Integer.parseInt(authentication.getName());
+            List<co.edu.uniquindio.casasrurales.dto.PaqueteAlquilerDTO> paquetes = propietarioService.obtenerPaquetesCasa(codigoCasa, idPropietario);
+            return ResponseEntity.ok(paquetes);
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", ex.getMessage()));
+        }
+    }
+
+    /**
+     * HU-05: Crear paquete de alquiler.
+     */
+    @PostMapping("/mis-casas/{codigoCasa}/paquetes")
+    public ResponseEntity<?> crearPaquete(
+            @PathVariable int codigoCasa,
+            @Valid @RequestBody co.edu.uniquindio.casasrurales.dto.PaqueteAlquilerDTO dto,
+            Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Debe estar autenticado"));
+        }
+        try {
+            int idPropietario = Integer.parseInt(authentication.getName());
+            var paquete = propietarioService.crearPaquete(codigoCasa, idPropietario, dto);
+            return ResponseEntity.status(HttpStatus.CREATED).body(paquete);
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", ex.getMessage()));
+        }
+    }
+
+    /**
+     * HU-05: Modificar paquete de alquiler.
+     */
+    @PutMapping("/mis-casas/{codigoCasa}/paquetes/{idPaquete}")
+    public ResponseEntity<?> modificarPaquete(
+            @PathVariable int codigoCasa,
+            @PathVariable int idPaquete,
+            @Valid @RequestBody co.edu.uniquindio.casasrurales.dto.PaqueteAlquilerDTO dto,
+            Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Debe estar autenticado"));
+        }
+        try {
+            int idPropietario = Integer.parseInt(authentication.getName());
+            var paquete = propietarioService.modificarPaquete(codigoCasa, idPropietario, idPaquete, dto);
+            return ResponseEntity.ok(paquete);
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", ex.getMessage()));
+        }
+    }
+
+    /**
+     * HU-05: Eliminar paquete de alquiler.
+     */
+    @DeleteMapping("/mis-casas/{codigoCasa}/paquetes/{idPaquete}")
+    public ResponseEntity<?> eliminarPaquete(
+            @PathVariable int codigoCasa,
+            @PathVariable int idPaquete,
+            Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Debe estar autenticado"));
+        }
+        try {
+            int idPropietario = Integer.parseInt(authentication.getName());
+            propietarioService.eliminarPaquete(codigoCasa, idPropietario, idPaquete);
+            return ResponseEntity.ok(Map.of("mensaje", "Paquete eliminado exitosamente"));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", ex.getMessage()));
+        }
+    }
 }

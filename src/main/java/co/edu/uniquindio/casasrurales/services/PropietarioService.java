@@ -18,6 +18,9 @@ import co.edu.uniquindio.casasrurales.enums.TipoCama;
 import co.edu.uniquindio.casasrurales.repositories.CasaRuralRepository;
 import co.edu.uniquindio.casasrurales.repositories.PropietarioRepository;
 import co.edu.uniquindio.casasrurales.repositories.ReservaRepository;
+import co.edu.uniquindio.casasrurales.repositories.PaqueteAlquilerRepository;
+import co.edu.uniquindio.casasrurales.entities.PaqueteAlquiler;
+import co.edu.uniquindio.casasrurales.dto.PaqueteAlquilerDTO;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,13 +34,16 @@ public class PropietarioService {
     private final PropietarioRepository propietarioRepository;
     private final CasaRuralRepository casaRuralRepository;
     private final ReservaRepository reservaRepository;
+    private final PaqueteAlquilerRepository paqueteAlquilerRepository;
 
     public PropietarioService(PropietarioRepository propietarioRepository,
                               CasaRuralRepository casaRuralRepository,
-                              ReservaRepository reservaRepository) {
+                              ReservaRepository reservaRepository,
+                              PaqueteAlquilerRepository paqueteAlquilerRepository) {
         this.propietarioRepository = propietarioRepository;
         this.casaRuralRepository = casaRuralRepository;
         this.reservaRepository = reservaRepository;
+        this.paqueteAlquilerRepository = paqueteAlquilerRepository;
     }
 
     /**
@@ -277,7 +283,7 @@ public class PropietarioService {
     private CasaRuralPropietarioDTO convertirACasaDTO(CasaRural casa) {
         List<Reserva> todasLasReservas = reservaRepository.findByCasaRuralCodigoCasa(casa.getCodigoCasa());
         long reservasActivas = todasLasReservas.stream()
-                .filter(r -> r.getEstado() == EstadoReserva.CONFIRMADA)
+                .filter(r -> r.getEstado() == EstadoReserva.CONFIRMADA || r.getEstado() == EstadoReserva.PENDIENTE_PAGO)
                 .count();
 
         return new CasaRuralPropietarioDTO(
@@ -339,4 +345,136 @@ public class PropietarioService {
             casa.agregarCocina(new Cocina());
         }
     }
+    /**
+     * HU-05: Crear un paquete de alquiler
+     */
+    @Transactional
+    public PaqueteAlquilerDTO crearPaquete(int codigoCasa, int idPropietario, PaqueteAlquilerDTO dto) {
+        CasaRural casa = obtenerCasaDelPropietario(codigoCasa, idPropietario);
+
+        // Validar fechas
+        if (dto.getFechaInicio().after(dto.getFechaFin())) {
+            throw new IllegalArgumentException("La fecha de inicio no puede ser posterior a la fecha de fin");
+        }
+
+        // Validar solapamiento
+        boolean solapamiento = casa.getPaquetesAlquiler().stream().anyMatch(p -> 
+            (dto.getFechaInicio().before(p.getFechaFin()) || dto.getFechaInicio().equals(p.getFechaFin())) &&
+            (dto.getFechaFin().after(p.getFechaInicio()) || dto.getFechaFin().equals(p.getFechaInicio()))
+        );
+
+        if (solapamiento) {
+            throw new IllegalArgumentException("Las fechas se solapan con un paquete existente de esta casa");
+        }
+
+        PaqueteAlquiler paquete = new PaqueteAlquiler(
+                dto.getFechaInicio(),
+                dto.getFechaFin(),
+                dto.getModalidad(),
+                dto.getPrecioCasaEntera(),
+                dto.getPrecioHabitacion(),
+                dto.isDisponible()
+        );
+        paquete.setCasaRural(casa);
+        
+        paqueteAlquilerRepository.save(paquete);
+        
+        return new PaqueteAlquilerDTO(
+                paquete.getIdPaquete(),
+                paquete.getFechaInicio(),
+                paquete.getFechaFin(),
+                paquete.getModalidad(),
+                paquete.getPrecioCasaEntera(),
+                paquete.getPrecioHabitacion(),
+                paquete.isDisponible()
+        );
+    }
+
+    /**
+     * HU-05: Modificar un paquete de alquiler
+     */
+    @Transactional
+    public PaqueteAlquilerDTO modificarPaquete(int codigoCasa, int idPropietario, int idPaquete, PaqueteAlquilerDTO dto) {
+        CasaRural casa = obtenerCasaDelPropietario(codigoCasa, idPropietario);
+        
+        Optional<PaqueteAlquiler> paqueteOpt = paqueteAlquilerRepository.findById(idPaquete);
+        if (paqueteOpt.isEmpty() || paqueteOpt.get().getCasaRural().getCodigoCasa() != codigoCasa) {
+            throw new IllegalArgumentException("Paquete no encontrado para esta casa");
+        }
+        
+        PaqueteAlquiler paquete = paqueteOpt.get();
+
+        // Validar fechas
+        if (dto.getFechaInicio().after(dto.getFechaFin())) {
+            throw new IllegalArgumentException("La fecha de inicio no puede ser posterior a la fecha de fin");
+        }
+
+        // Validar solapamiento excluyendo el paquete actual
+        boolean solapamiento = casa.getPaquetesAlquiler().stream()
+            .filter(p -> p.getIdPaquete() != idPaquete)
+            .anyMatch(p -> 
+                (dto.getFechaInicio().before(p.getFechaFin()) || dto.getFechaInicio().equals(p.getFechaFin())) &&
+                (dto.getFechaFin().after(p.getFechaInicio()) || dto.getFechaFin().equals(p.getFechaInicio()))
+            );
+
+        if (solapamiento) {
+            throw new IllegalArgumentException("Las fechas se solapan con otro paquete existente de esta casa");
+        }
+
+        paquete.modificar(
+                dto.getFechaInicio(),
+                dto.getFechaFin(),
+                dto.getModalidad(),
+                dto.getPrecioCasaEntera(),
+                dto.getPrecioHabitacion(),
+                dto.isDisponible()
+        );
+
+        paqueteAlquilerRepository.save(paquete);
+
+        return new PaqueteAlquilerDTO(
+                paquete.getIdPaquete(),
+                paquete.getFechaInicio(),
+                paquete.getFechaFin(),
+                paquete.getModalidad(),
+                paquete.getPrecioCasaEntera(),
+                paquete.getPrecioHabitacion(),
+                paquete.isDisponible()
+        );
+    }
+
+    /**
+     * HU-05: Eliminar un paquete de alquiler
+     */
+    @Transactional
+    public void eliminarPaquete(int codigoCasa, int idPropietario, int idPaquete) {
+        CasaRural casa = obtenerCasaDelPropietario(codigoCasa, idPropietario);
+        
+        Optional<PaqueteAlquiler> paqueteOpt = paqueteAlquilerRepository.findById(idPaquete);
+        if (paqueteOpt.isEmpty() || paqueteOpt.get().getCasaRural().getCodigoCasa() != codigoCasa) {
+            throw new IllegalArgumentException("Paquete no encontrado para esta casa");
+        }
+        
+        paqueteAlquilerRepository.delete(paqueteOpt.get());
+    }
+
+    /**
+     * Obtener paquetes de una casa
+     */
+    public List<PaqueteAlquilerDTO> obtenerPaquetesCasa(int codigoCasa, int idPropietario) {
+        CasaRural casa = obtenerCasaDelPropietario(codigoCasa, idPropietario);
+        
+        return casa.getPaquetesAlquiler().stream()
+                .map(paquete -> new PaqueteAlquilerDTO(
+                        paquete.getIdPaquete(),
+                        paquete.getFechaInicio(),
+                        paquete.getFechaFin(),
+                        paquete.getModalidad(),
+                        paquete.getPrecioCasaEntera(),
+                        paquete.getPrecioHabitacion(),
+                        paquete.isDisponible()
+                ))
+                .collect(Collectors.toList());
+    }
 }
+

@@ -5,6 +5,7 @@ import RegistroPropietario from './components/RegistroPropietario'
 import RegistroCliente from './components/RegistroCliente'
 import BusquedaCasas from './components/BusquedaCasas'
 import DashboardPropietario from './components/DashboardPropietario'
+import MisReservasCliente from './components/MisReservasCliente'
 
 function App() {
   const [seccionActiva, setSeccionActiva] = useState('busqueda')
@@ -44,6 +45,7 @@ function App() {
   }
 
   const esPropietario = usuarioAutenticado?.tipoUsuario === 'propietario'
+  const esCliente = usuarioAutenticado && String(usuarioAutenticado.tipoUsuario).toLowerCase() === 'cliente'
 
   const renderContenido = () => {
     if (seccionActiva === 'login') {
@@ -86,7 +88,18 @@ function App() {
       )
     }
 
-    return <BusquedaCasas />
+    if (seccionActiva === 'mis-reservas' && esCliente) {
+      return (
+        <main className="main-content">
+          <MisReservasCliente />
+        </main>
+      )
+    }
+
+    return <BusquedaCasas 
+             usuarioAutenticado={usuarioAutenticado} 
+             onRequireLogin={() => setSeccionActiva('login')} 
+           />
   }
 
   return (
@@ -115,6 +128,14 @@ function App() {
                   onClick={() => setSeccionActiva('dashboard-propietario')}
                 >
                   Mi dashboard
+                </button>
+              )}
+              {esCliente && (
+                <button
+                  className={seccionActiva === 'mis-reservas' ? 'nav-button active' : 'nav-button'}
+                  onClick={() => setSeccionActiva('mis-reservas')}
+                >
+                  Mis Reservas
                 </button>
               )}
               {usuarioAutenticado ? (

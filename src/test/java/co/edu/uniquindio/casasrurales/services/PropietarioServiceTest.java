@@ -22,6 +22,7 @@ import co.edu.uniquindio.casasrurales.entities.Propietario;
 import co.edu.uniquindio.casasrurales.repositories.CasaRuralRepository;
 import co.edu.uniquindio.casasrurales.repositories.PropietarioRepository;
 import co.edu.uniquindio.casasrurales.repositories.ReservaRepository;
+import co.edu.uniquindio.casasrurales.repositories.PaqueteAlquilerRepository;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -31,6 +32,7 @@ class PropietarioServiceTest {
     private PropietarioRepository propietarioRepository;
     private CasaRuralRepository casaRuralRepository;
     private ReservaRepository reservaRepository;
+    private PaqueteAlquilerRepository paqueteAlquilerRepository;
     private PropietarioService propietarioService;
 
     @BeforeEach
@@ -38,7 +40,8 @@ class PropietarioServiceTest {
         propietarioRepository = mock(PropietarioRepository.class);
         casaRuralRepository = mock(CasaRuralRepository.class);
         reservaRepository = mock(ReservaRepository.class);
-        propietarioService = new PropietarioService(propietarioRepository, casaRuralRepository, reservaRepository);
+        paqueteAlquilerRepository = mock(PaqueteAlquilerRepository.class);
+        propietarioService = new PropietarioService(propietarioRepository, casaRuralRepository, reservaRepository, paqueteAlquilerRepository);
     }
 
     @Test

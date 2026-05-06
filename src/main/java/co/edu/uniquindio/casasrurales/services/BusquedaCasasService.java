@@ -108,6 +108,28 @@ public class BusquedaCasasService {
         }
     }
 
+    /**
+     * Obtiene los paquetes de alquiler disponibles para una casa.
+     */
+    public List<co.edu.uniquindio.casasrurales.dto.PaqueteAlquilerDTO> obtenerPaquetesCasa(int codigoCasa) {
+        Optional<CasaRural> casaOpt = casaRuralRepository.findById(codigoCasa);
+        if (casaOpt.isEmpty() || !casaOpt.get().isActiva()) {
+            throw new IllegalArgumentException("Casa no encontrada o inactiva");
+        }
+        return casaOpt.get().getPaquetesAlquiler().stream()
+                .filter(p -> p.isDisponible())
+                .map(paquete -> new co.edu.uniquindio.casasrurales.dto.PaqueteAlquilerDTO(
+                        paquete.getIdPaquete(),
+                        paquete.getFechaInicio(),
+                        paquete.getFechaFin(),
+                        paquete.getModalidad(),
+                        paquete.getPrecioCasaEntera(),
+                        paquete.getPrecioHabitacion(),
+                        paquete.isDisponible()
+                ))
+                .collect(Collectors.toList());
+    }
+
     // === Métodos privados de utilidad ===
 
     /**

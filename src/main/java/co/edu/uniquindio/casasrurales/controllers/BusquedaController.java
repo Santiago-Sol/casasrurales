@@ -103,4 +103,19 @@ public class BusquedaController {
             return ResponseEntity.badRequest().build();
         }
     }
+
+    /**
+     * Busca los paquetes disponibles para una casa.
+     * 
+     * @param codigoCasa el código de la casa
+     * @return lista de paquetes disponibles
+     */
+    @GetMapping("/{codigoCasa}/paquetes")
+    public ResponseEntity<?> obtenerPaquetesCasa(@PathVariable int codigoCasa) {
+        try {
+            return ResponseEntity.ok(busquedaCasasService.obtenerPaquetesCasa(codigoCasa));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
 }

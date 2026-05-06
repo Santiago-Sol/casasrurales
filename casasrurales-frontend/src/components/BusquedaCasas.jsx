@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import '../styles/busqueda.css'
+import ReservaCasa from './ReservaCasa'
 
 const imagenesCasas = [
   'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=900&q=80',
@@ -8,7 +9,7 @@ const imagenesCasas = [
   'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=900&q=80'
 ]
 
-export default function BusquedaCasas() {
+export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin }) {
   const [tipoBusqueda, setTipoBusqueda] = useState('poblacion')
   const [termino, setTermino] = useState('Armenia')
   const [resultados, setResultados] = useState([])
@@ -17,6 +18,7 @@ export default function BusquedaCasas() {
   const [mensaje, setMensaje] = useState('')
   const [tipoMensaje, setTipoMensaje] = useState('info')
   const [soloCasas, setSoloCasas] = useState(true)
+  const [casaReservando, setCasaReservando] = useState(null)
 
   const casasOrdenadas = useMemo(
     () => [...resultados].sort((a, b) => a.nombrePropiedad.localeCompare(b.nombrePropiedad)),
@@ -144,10 +146,7 @@ export default function BusquedaCasas() {
             Encuentra estadias tranquilas, verdes y listas para reservar cerca del paisaje cafetero.
           </p>
         </div>
-        <div className="hero-actions">
-          <button className="outline-action">Ver mapa</button>
-          <button className="solid-action">Guardar busqueda</button>
-        </div>
+
       </section>
 
       <section className="catalog-layout">
@@ -265,11 +264,36 @@ export default function BusquedaCasas() {
                 <span>{detalle.numCocinas} cocinas</span>
                 <span>{detalle.numPlazasGaraje} garajes</span>
               </div>
-              <p className="owner">Propietario: {detalle.nombrePropietario}</p>
               <p className="owner">Telefono: {detalle.telefonoPropietario}</p>
+              <button 
+                className="btn-primary-action" 
+                style={{ marginTop: '20px', width: '100%' }}
+                onClick={() => {
+                  const esClienteValido = usuarioAutenticado && 
+                    (usuarioAutenticado.tipoUsuario === 'cliente' || 
+                     String(usuarioAutenticado.tipoUsuario).toLowerCase() === 'cliente' ||
+                     !usuarioAutenticado.tipoUsuario); // Permitir si por alguna razon falta pero esta autenticado
+                     
+                  if (!esClienteValido) {
+                    alert("Por favor inicia sesión como cliente para poder reservar.");
+                    onRequireLogin();
+                  } else {
+                    setCasaReservando(detalle);
+                  }
+                }}
+              >
+                Reservar esta casa
+              </button>
             </div>
           </section>
         </div>
+      )}
+
+      {casaReservando && (
+        <ReservaCasa 
+          casa={casaReservando} 
+          onClose={() => setCasaReservando(null)} 
+        />
       )}
     </main>
   )
