@@ -27,6 +27,8 @@ public class ReservaRequestDTO {
     @Min(value = 0, message = "El importe total no puede ser negativo")
     private Double importeTotal;
 
+    private String telefonoContacto;
+
     private List<Integer> idsHabitaciones;
 
     public Integer getCodigoCasa() {
@@ -67,5 +69,13 @@ public class ReservaRequestDTO {
 
     public void setIdsHabitaciones(List<Integer> idsHabitaciones) {
         this.idsHabitaciones = idsHabitaciones;
+    }
+
+    public String getTelefonoContacto() {
+        return telefonoContacto;
+    }
+
+    public void setTelefonoContacto(String telefonoContacto) {
+        this.telefonoContacto = telefonoContacto;
     }
 }

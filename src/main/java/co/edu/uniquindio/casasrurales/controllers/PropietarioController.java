@@ -17,7 +17,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import co.edu.uniquindio.casasrurales.dto.CasaRuralFormDTO;
 import co.edu.uniquindio.casasrurales.dto.CasaRuralPropietarioDTO;
+import co.edu.uniquindio.casasrurales.dto.PagoRegistroDTO;
 import co.edu.uniquindio.casasrurales.dto.RegistroCasaForm;
+import co.edu.uniquindio.casasrurales.dto.ReservaPropietarioDTO;
 import co.edu.uniquindio.casasrurales.services.PropietarioService;
 import jakarta.validation.Valid;
 
@@ -305,6 +307,94 @@ public class PropietarioController {
             return ResponseEntity.ok(Map.of("mensaje", "Paquete eliminado exitosamente"));
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", ex.getMessage()));
+        }
+    }
+
+    @GetMapping("/reservas")
+    public ResponseEntity<?> obtenerReservas(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Debe estar autenticado"));
+        }
+        try {
+            int idPropietario = Integer.parseInt(authentication.getName());
+            List<ReservaPropietarioDTO> reservas = propietarioService.obtenerReservasPropietario(idPropietario);
+            return ResponseEntity.ok(reservas);
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", ex.getMessage()));
+        }
+    }
+
+    @GetMapping("/reservas/vencidas")
+    public ResponseEntity<?> obtenerReservasVencidas(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Debe estar autenticado"));
+        }
+        try {
+            int idPropietario = Integer.parseInt(authentication.getName());
+            List<ReservaPropietarioDTO> reservas = propietarioService.obtenerReservasVencidas(idPropietario);
+            return ResponseEntity.ok(reservas);
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", ex.getMessage()));
+        }
+    }
+
+    @PostMapping("/reservas/{numeroReserva}/pago")
+    public ResponseEntity<?> registrarPago(
+            @PathVariable int numeroReserva,
+            @Valid @RequestBody PagoRegistroDTO dto,
+            Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Debe estar autenticado"));
+        }
+        try {
+            int idPropietario = Integer.parseInt(authentication.getName());
+            ReservaPropietarioDTO reserva = propietarioService.registrarPagoReserva(numeroReserva, idPropietario, dto);
+            List<ReservaPropietarioDTO> vencidas = propietarioService.obtenerReservasVencidas(idPropietario);
+            return ResponseEntity.ok(Map.of(
+                    "mensaje", "Pago registrado exitosamente",
+                    "reserva", reserva,
+                    "reservasVencidas", vencidas
+            ));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", ex.getMessage()));
+        } catch (IllegalStateException ex) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", ex.getMessage()));
+        }
+    }
+
+    @PostMapping("/reservas/{numeroReserva}/anular")
+    public ResponseEntity<?> anularReservaVencida(
+            @PathVariable int numeroReserva,
+            Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Debe estar autenticado"));
+        }
+        try {
+            int idPropietario = Integer.parseInt(authentication.getName());
+            ReservaPropietarioDTO reserva = propietarioService.anularReservaVencida(numeroReserva, idPropietario);
+            return ResponseEntity.ok(Map.of("mensaje", "Reserva anulada exitosamente", "reserva", reserva));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", ex.getMessage()));
+        } catch (IllegalStateException ex) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", ex.getMessage()));
+        }
+    }
+
+    @PostMapping("/reservas/{numeroReserva}/mantener")
+    public ResponseEntity<?> mantenerReservaVencida(
+            @PathVariable int numeroReserva,
+            Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Debe estar autenticado"));
+        }
+        try {
+            int idPropietario = Integer.parseInt(authentication.getName());
+            ReservaPropietarioDTO reserva = propietarioService.mantenerReservaVencida(numeroReserva, idPropietario);
+            return ResponseEntity.ok(Map.of("mensaje", "Reserva mantenida", "reserva", reserva));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", ex.getMessage()));
+        } catch (IllegalStateException ex) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", ex.getMessage()));
         }
     }
 }

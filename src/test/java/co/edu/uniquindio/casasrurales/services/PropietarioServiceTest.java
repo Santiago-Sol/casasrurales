@@ -17,12 +17,17 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import co.edu.uniquindio.casasrurales.dto.CasaRuralFormDTO;
+import co.edu.uniquindio.casasrurales.dto.PagoRegistroDTO;
 import co.edu.uniquindio.casasrurales.entities.CasaRural;
+import co.edu.uniquindio.casasrurales.entities.Pago;
 import co.edu.uniquindio.casasrurales.entities.Propietario;
+import co.edu.uniquindio.casasrurales.entities.Reserva;
+import co.edu.uniquindio.casasrurales.enums.EstadoReserva;
 import co.edu.uniquindio.casasrurales.repositories.CasaRuralRepository;
 import co.edu.uniquindio.casasrurales.repositories.PropietarioRepository;
 import co.edu.uniquindio.casasrurales.repositories.ReservaRepository;
 import co.edu.uniquindio.casasrurales.repositories.PaqueteAlquilerRepository;
+import co.edu.uniquindio.casasrurales.repositories.PagoRepository;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -33,6 +38,7 @@ class PropietarioServiceTest {
     private CasaRuralRepository casaRuralRepository;
     private ReservaRepository reservaRepository;
     private PaqueteAlquilerRepository paqueteAlquilerRepository;
+    private PagoRepository pagoRepository;
     private PropietarioService propietarioService;
 
     @BeforeEach
@@ -41,7 +47,8 @@ class PropietarioServiceTest {
         casaRuralRepository = mock(CasaRuralRepository.class);
         reservaRepository = mock(ReservaRepository.class);
         paqueteAlquilerRepository = mock(PaqueteAlquilerRepository.class);
-        propietarioService = new PropietarioService(propietarioRepository, casaRuralRepository, reservaRepository, paqueteAlquilerRepository);
+        pagoRepository = mock(PagoRepository.class);
+        propietarioService = new PropietarioService(propietarioRepository, casaRuralRepository, reservaRepository, paqueteAlquilerRepository, pagoRepository);
     }
 
     @Test
@@ -58,7 +65,7 @@ class PropietarioServiceTest {
         form.setNumComedores(2);
         form.setNumPlazasGaraje(3);
         form.setNumHabitaciones(3);
-        form.setNumBanos(1);
+        form.setNumBanos(2);
         form.setNumCocinas(1);
 
         when(propietarioRepository.findById(8)).thenReturn(Optional.of(propietario));
@@ -67,14 +74,14 @@ class PropietarioServiceTest {
 
         String respuesta = propietarioService.crearCasa(form, 8);
 
-        assertEquals("Casa registrada exitosamente", respuesta);
+        assertEquals("Casa registrada exitosamente con codigo 15", respuesta);
         assertEquals(1, propietario.getCasas().size());
         CasaRural casa = propietario.getCasas().getFirst();
         assertEquals("La Montanita", casa.getNombrePropiedad());
         assertEquals("Salento", casa.getPoblacion());
         assertTrue(casa.isActiva());
         assertEquals(3, casa.getNumDormitorios());
-        assertEquals(1, casa.getNumBanos());
+        assertEquals(2, casa.getNumBanos());
         assertEquals(1, casa.getNumCocinas());
         verify(propietarioRepository, times(1)).save(any(Propietario.class));
     }
@@ -178,5 +185,74 @@ class PropietarioServiceTest {
         List<?> resultado = propietarioService.obtenerCasasPropietario(8);
 
         assertFalse(resultado.isEmpty());
+    }
+
+    @Test
+    @DisplayName("registrarPagoReserva registra pago y confirma reserva del propietario")
+    void registrarPagoReservaExitosamente() {
+        Propietario propietario = new Propietario("3001234567", "dueno", "secret123", "123456");
+        propietario.setIdUsuario(8);
+        CasaRural casa = new CasaRural(15, "Salento", "La Montanita", "Cabana familiar", 1, 1, true);
+        casa.setPropietario(propietario);
+
+        Reserva reserva = mock(Reserva.class);
+        when(reserva.getNumeroReserva()).thenReturn(99);
+        when(reserva.getCasaRural()).thenReturn(casa);
+        when(reserva.getEstado()).thenReturn(EstadoReserva.PENDIENTE_PAGO);
+
+        PagoRegistroDTO dto = new PagoRegistroDTO();
+        dto.setMonto(120000.0);
+
+        when(reservaRepository.findById(99)).thenReturn(Optional.of(reserva));
+
+        propietarioService.registrarPagoReserva(99, 8, dto);
+
+        verify(reserva).agregarPago(any(Pago.class));
+        verify(reserva).confirmar();
+        verify(pagoRepository).save(any(Pago.class));
+        verify(reservaRepository).save(reserva);
+    }
+
+    @Test
+    @DisplayName("obtenerReservasVencidas devuelve solo reservas vencidas del propietario")
+    void obtenerReservasVencidasExitosamente() {
+        Propietario propietario = new Propietario("3001234567", "dueno", "secret123", "123456");
+        propietario.setIdUsuario(8);
+        CasaRural casa = new CasaRural(15, "Salento", "La Montanita", "Cabana familiar", 1, 1, true);
+        casa.setPropietario(propietario);
+
+        Reserva vencida = mock(Reserva.class);
+        when(vencida.getCasaRural()).thenReturn(casa);
+        when(vencida.estaVencida()).thenReturn(true);
+
+        Reserva vigente = mock(Reserva.class);
+        when(vigente.getCasaRural()).thenReturn(casa);
+        when(vigente.estaVencida()).thenReturn(false);
+
+        when(propietarioRepository.findById(8)).thenReturn(Optional.of(propietario));
+        when(reservaRepository.findAll()).thenReturn(List.of(vencida, vigente));
+
+        List<?> resultado = propietarioService.obtenerReservasVencidas(8);
+
+        assertEquals(1, resultado.size());
+    }
+
+    @Test
+    @DisplayName("anularReservaVencida cancela reserva vencida del propietario")
+    void anularReservaVencidaExitosamente() {
+        Propietario propietario = new Propietario("3001234567", "dueno", "secret123", "123456");
+        propietario.setIdUsuario(8);
+        CasaRural casa = new CasaRural(15, "Salento", "La Montanita", "Cabana familiar", 1, 1, true);
+        casa.setPropietario(propietario);
+
+        Reserva reserva = mock(Reserva.class);
+        when(reserva.getCasaRural()).thenReturn(casa);
+        when(reserva.estaVencida()).thenReturn(true);
+        when(reservaRepository.findById(99)).thenReturn(Optional.of(reserva));
+
+        propietarioService.anularReservaVencida(99, 8);
+
+        verify(reserva).cancelar();
+        verify(reservaRepository).save(reserva);
     }
 }

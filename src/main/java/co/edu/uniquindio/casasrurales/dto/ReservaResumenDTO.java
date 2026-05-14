@@ -22,6 +22,7 @@ public class ReservaResumenDTO {
     private EstadoReserva estado;
     private String poblacionCasa;
     private int codigoCasa;
+    private String cuentaCorrientePropietario;
 
     public ReservaResumenDTO() {
     }
@@ -30,6 +31,14 @@ public class ReservaResumenDTO {
                              int numeroNoches, TipoReserva tipoReserva, double importeTotal,
                              double importeAnticipo, Date fechaLimitePago, EstadoReserva estado,
                              String poblacionCasa, int codigoCasa) {
+        this(numeroReserva, fechaReserva, fechaEntrada, numeroNoches, tipoReserva, importeTotal,
+                importeAnticipo, fechaLimitePago, estado, poblacionCasa, codigoCasa, null);
+    }
+
+    public ReservaResumenDTO(int numeroReserva, Date fechaReserva, Date fechaEntrada,
+                             int numeroNoches, TipoReserva tipoReserva, double importeTotal,
+                             double importeAnticipo, Date fechaLimitePago, EstadoReserva estado,
+                             String poblacionCasa, int codigoCasa, String cuentaCorrientePropietario) {
         this.numeroReserva = numeroReserva;
         this.fechaReserva = fechaReserva;
         this.fechaEntrada = fechaEntrada;
@@ -41,6 +50,7 @@ public class ReservaResumenDTO {
         this.estado = estado;
         this.poblacionCasa = poblacionCasa;
         this.codigoCasa = codigoCasa;
+        this.cuentaCorrientePropietario = cuentaCorrientePropietario;
     }
 
     public int getNumeroReserva() { return numeroReserva; }
@@ -54,4 +64,5 @@ public class ReservaResumenDTO {
     public EstadoReserva getEstado() { return estado; }
     public String getPoblacionCasa() { return poblacionCasa; }
     public int getCodigoCasa() { return codigoCasa; }
+    public String getCuentaCorrientePropietario() { return cuentaCorrientePropietario; }
 }

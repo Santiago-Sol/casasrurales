@@ -3,22 +3,28 @@ package co.edu.uniquindio.casasrurales.services;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.Date;
 
 import co.edu.uniquindio.casasrurales.dto.CasaRuralFormDTO;
 import co.edu.uniquindio.casasrurales.dto.CasaRuralPropietarioDTO;
+import co.edu.uniquindio.casasrurales.dto.PagoRegistroDTO;
 import co.edu.uniquindio.casasrurales.dto.RegistroCasaForm;
+import co.edu.uniquindio.casasrurales.dto.ReservaPropietarioDTO;
 import co.edu.uniquindio.casasrurales.entities.Bano;
 import co.edu.uniquindio.casasrurales.entities.CasaRural;
 import co.edu.uniquindio.casasrurales.entities.Cocina;
 import co.edu.uniquindio.casasrurales.entities.Habitacion;
+import co.edu.uniquindio.casasrurales.entities.Pago;
 import co.edu.uniquindio.casasrurales.entities.Propietario;
 import co.edu.uniquindio.casasrurales.entities.Reserva;
+import co.edu.uniquindio.casasrurales.enums.EstadoPago;
 import co.edu.uniquindio.casasrurales.enums.EstadoReserva;
 import co.edu.uniquindio.casasrurales.enums.TipoCama;
 import co.edu.uniquindio.casasrurales.repositories.CasaRuralRepository;
 import co.edu.uniquindio.casasrurales.repositories.PropietarioRepository;
 import co.edu.uniquindio.casasrurales.repositories.ReservaRepository;
 import co.edu.uniquindio.casasrurales.repositories.PaqueteAlquilerRepository;
+import co.edu.uniquindio.casasrurales.repositories.PagoRepository;
 import co.edu.uniquindio.casasrurales.entities.PaqueteAlquiler;
 import co.edu.uniquindio.casasrurales.dto.PaqueteAlquilerDTO;
 import org.springframework.stereotype.Service;
@@ -35,15 +41,18 @@ public class PropietarioService {
     private final CasaRuralRepository casaRuralRepository;
     private final ReservaRepository reservaRepository;
     private final PaqueteAlquilerRepository paqueteAlquilerRepository;
+    private final PagoRepository pagoRepository;
 
     public PropietarioService(PropietarioRepository propietarioRepository,
                               CasaRuralRepository casaRuralRepository,
                               ReservaRepository reservaRepository,
-                              PaqueteAlquilerRepository paqueteAlquilerRepository) {
+                              PaqueteAlquilerRepository paqueteAlquilerRepository,
+                              PagoRepository pagoRepository) {
         this.propietarioRepository = propietarioRepository;
         this.casaRuralRepository = casaRuralRepository;
         this.reservaRepository = reservaRepository;
         this.paqueteAlquilerRepository = paqueteAlquilerRepository;
+        this.pagoRepository = pagoRepository;
     }
 
     /**
@@ -148,7 +157,9 @@ public class PropietarioService {
             throw new IllegalArgumentException("Propietario no encontrado");
         }
 
-        if (casaRuralRepository.existsById(form.getCodigoCasa())) {
+        int codigoCasa = resolverCodigoCasa(form.getCodigoCasa());
+
+        if (casaRuralRepository.existsById(codigoCasa)) {
             throw new IllegalArgumentException("Ya existe una casa con ese codigo");
         }
 
@@ -156,7 +167,7 @@ public class PropietarioService {
 
         Propietario propietario = propietarioOpt.get();
         CasaRural casa = new CasaRural(
-                form.getCodigoCasa(),
+                codigoCasa,
                 form.getPoblacion().trim(),
                 form.getNombrePropiedad().trim(),
                 form.getDescripcion() != null ? form.getDescripcion().trim() : null,
@@ -169,7 +180,7 @@ public class PropietarioService {
         propietario.darAltaCasa(casa);
         propietarioRepository.save(propietario);
 
-        return "Casa registrada exitosamente";
+        return "Casa registrada exitosamente con codigo " + codigoCasa;
     }
 
     /**
@@ -323,8 +334,8 @@ public class PropietarioService {
             throw new IllegalArgumentException("La casa debe tener minimo 3 habitaciones");
         }
 
-        if (form.getNumBanos() == null || form.getNumBanos() < 1) {
-            throw new IllegalArgumentException("La casa debe tener minimo 1 bano");
+        if (form.getNumBanos() == null || form.getNumBanos() < 2) {
+            throw new IllegalArgumentException("La casa debe tener minimo 2 banos");
         }
 
         if (form.getNumCocinas() == null || form.getNumCocinas() < 1) {
@@ -388,6 +399,13 @@ public class PropietarioService {
                 paquete.getPrecioHabitacion(),
                 paquete.isDisponible()
         );
+    }
+
+    private int resolverCodigoCasa(Integer codigoSolicitado) {
+        if (codigoSolicitado != null && codigoSolicitado > 0) {
+            return codigoSolicitado;
+        }
+        return casaRuralRepository.obtenerMayorCodigoCasa() + 1;
     }
 
     /**
@@ -475,6 +493,106 @@ public class PropietarioService {
                         paquete.isDisponible()
                 ))
                 .collect(Collectors.toList());
+    }
+
+    public List<ReservaPropietarioDTO> obtenerReservasPropietario(int idPropietario) {
+        validarPropietarioExiste(idPropietario);
+        return reservaRepository.findAll().stream()
+                .filter(reserva -> perteneceAlPropietario(reserva, idPropietario))
+                .map(this::convertirAReservaPropietarioDTO)
+                .collect(Collectors.toList());
+    }
+
+    public List<ReservaPropietarioDTO> obtenerReservasVencidas(int idPropietario) {
+        validarPropietarioExiste(idPropietario);
+        return reservaRepository.findAll().stream()
+                .filter(reserva -> perteneceAlPropietario(reserva, idPropietario))
+                .filter(Reserva::estaVencida)
+                .map(this::convertirAReservaPropietarioDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public ReservaPropietarioDTO registrarPagoReserva(int numeroReserva, int idPropietario, PagoRegistroDTO dto) {
+        Reserva reserva = obtenerReservaDelPropietario(numeroReserva, idPropietario);
+        if (reserva.getEstado() == EstadoReserva.ANULADA) {
+            throw new IllegalStateException("No se puede registrar pago a una reserva anulada");
+        }
+
+        double monto = dto.getMonto() != null ? dto.getMonto() : 0;
+        if (monto <= 0) {
+            throw new IllegalArgumentException("El monto debe ser mayor a cero");
+        }
+
+        Pago pago = new Pago(dto.getFechaPago() != null ? dto.getFechaPago() : new Date(), monto, EstadoPago.PENDIENTE);
+        pago.registrar();
+        reserva.agregarPago(pago);
+        reserva.confirmar();
+
+        pagoRepository.save(pago);
+        reservaRepository.save(reserva);
+        return convertirAReservaPropietarioDTO(reserva);
+    }
+
+    @Transactional
+    public ReservaPropietarioDTO anularReservaVencida(int numeroReserva, int idPropietario) {
+        Reserva reserva = obtenerReservaDelPropietario(numeroReserva, idPropietario);
+        if (!reserva.estaVencida()) {
+            throw new IllegalStateException("La reserva no esta vencida");
+        }
+
+        reserva.cancelar();
+        reservaRepository.save(reserva);
+        return convertirAReservaPropietarioDTO(reserva);
+    }
+
+    @Transactional
+    public ReservaPropietarioDTO mantenerReservaVencida(int numeroReserva, int idPropietario) {
+        Reserva reserva = obtenerReservaDelPropietario(numeroReserva, idPropietario);
+        if (!reserva.estaVencida()) {
+            throw new IllegalStateException("La reserva no esta vencida");
+        }
+        return convertirAReservaPropietarioDTO(reserva);
+    }
+
+    private void validarPropietarioExiste(int idPropietario) {
+        if (propietarioRepository.findById(idPropietario).isEmpty()) {
+            throw new IllegalArgumentException("Propietario no encontrado");
+        }
+    }
+
+    private Reserva obtenerReservaDelPropietario(int numeroReserva, int idPropietario) {
+        Reserva reserva = reservaRepository.findById(numeroReserva)
+                .orElseThrow(() -> new IllegalArgumentException("Reserva no encontrada"));
+        if (!perteneceAlPropietario(reserva, idPropietario)) {
+            throw new IllegalArgumentException("No tienes permiso para gestionar esta reserva");
+        }
+        return reserva;
+    }
+
+    private boolean perteneceAlPropietario(Reserva reserva, int idPropietario) {
+        return reserva.getCasaRural() != null
+                && reserva.getCasaRural().getPropietario() != null
+                && reserva.getCasaRural().getPropietario().getIdUsuario() == idPropietario;
+    }
+
+    private ReservaPropietarioDTO convertirAReservaPropietarioDTO(Reserva reserva) {
+        CasaRural casa = reserva.getCasaRural();
+        return new ReservaPropietarioDTO(
+                reserva.getNumeroReserva(),
+                casa != null ? casa.getCodigoCasa() : 0,
+                casa != null ? casa.getNombrePropiedad() : "",
+                casa != null ? casa.getPoblacion() : "",
+                reserva.getFechaReserva(),
+                reserva.getFechaEntrada(),
+                reserva.getNumeroNoches(),
+                reserva.getFechaLimitePago(),
+                reserva.getImporteTotal(),
+                reserva.getImporteAnticipo(),
+                reserva.getEstado(),
+                reserva.getTipoReserva(),
+                reserva.estaVencida()
+        );
     }
 }
 

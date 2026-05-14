@@ -18,6 +18,7 @@ import co.edu.uniquindio.casasrurales.dto.ReservaRequestDTO;
 import co.edu.uniquindio.casasrurales.dto.ReservaResumenDTO;
 import co.edu.uniquindio.casasrurales.entities.Cliente;
 import co.edu.uniquindio.casasrurales.entities.Habitacion;
+import co.edu.uniquindio.casasrurales.entities.Propietario;
 import co.edu.uniquindio.casasrurales.entities.Reserva;
 import co.edu.uniquindio.casasrurales.repositories.ClienteRepository;
 import co.edu.uniquindio.casasrurales.repositories.HabitacionRepository;
@@ -72,30 +73,26 @@ public class ReservaController {
             habitaciones = habitacionRepository.findAllById(requestDTO.getIdsHabitaciones());
         }
 
-        Reserva reserva = sistemaReservas.realizarReserva(
-                requestDTO.getCodigoCasa(),
-                clienteOpt.get(),
-                requestDTO.getFechaEntrada(),
-                requestDTO.getNumeroNoches(),
-                habitaciones,
-                requestDTO.getImporteTotal()
-        );
+        try {
+            Reserva reserva = sistemaReservas.realizarReserva(
+                    requestDTO.getCodigoCasa(),
+                    clienteOpt.get(),
+                    requestDTO.getFechaEntrada(),
+                    requestDTO.getNumeroNoches(),
+                    habitaciones,
+                    requestDTO.getImporteTotal()
+            );
 
-        ReservaResumenDTO resumen = new ReservaResumenDTO(
-                reserva.getNumeroReserva(),
-                reserva.getFechaReserva(),
-                reserva.getFechaEntrada(),
-                reserva.getNumeroNoches(),
-                reserva.getTipoReserva(),
-                reserva.getImporteTotal(),
-                reserva.getImporteAnticipo(),
-                reserva.getFechaLimitePago(),
-                reserva.getEstado(),
-                reserva.getCasaRural().getPoblacion(),
-                reserva.getCasaRural().getCodigoCasa()
-        );
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(resumen);
+            return ResponseEntity.status(HttpStatus.CREATED).body(crearResumen(reserva));
+        } catch (IllegalStateException ex) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
+                    "error", ex.getMessage(),
+                    "disponibilidad", sistemaReservas.consultarDisponibilidadDetallada(
+                            requestDTO.getCodigoCasa(),
+                            requestDTO.getFechaEntrada(),
+                            requestDTO.getNumeroNoches())
+            ));
+        }
     }
 
     /**
@@ -120,19 +117,7 @@ public class ReservaController {
         List<ReservaResumenDTO> reservas = sistemaReservas
                 .getReservasPorCliente(clienteOpt.get().getIdUsuario())
                 .stream()
-                .map(r -> new ReservaResumenDTO(
-                        r.getNumeroReserva(),
-                        r.getFechaReserva(),
-                        r.getFechaEntrada(),
-                        r.getNumeroNoches(),
-                        r.getTipoReserva(),
-                        r.getImporteTotal(),
-                        r.getImporteAnticipo(),
-                        r.getFechaLimitePago(),
-                        r.getEstado(),
-                        r.getCasaRural().getPoblacion(),
-                        r.getCasaRural().getCodigoCasa()
-                ))
+                .map(this::crearResumen)
                 .toList();
 
         return ResponseEntity.ok(reservas);
@@ -152,7 +137,11 @@ public class ReservaController {
                     .body(Map.of("error", "Reserva no encontrada"));
         }
 
-        ReservaResumenDTO resumen = new ReservaResumenDTO(
+        return ResponseEntity.ok(crearResumen(reserva));
+    }
+
+    private ReservaResumenDTO crearResumen(Reserva reserva) {
+        return new ReservaResumenDTO(
                 reserva.getNumeroReserva(),
                 reserva.getFechaReserva(),
                 reserva.getFechaEntrada(),
@@ -163,10 +152,14 @@ public class ReservaController {
                 reserva.getFechaLimitePago(),
                 reserva.getEstado(),
                 reserva.getCasaRural().getPoblacion(),
-                reserva.getCasaRural().getCodigoCasa()
+                reserva.getCasaRural().getCodigoCasa(),
+                obtenerCuentaPropietario(reserva)
         );
+    }
 
-        return ResponseEntity.ok(resumen);
+    private String obtenerCuentaPropietario(Reserva reserva) {
+        Propietario propietario = reserva.getCasaRural().getPropietario();
+        return propietario != null ? propietario.getNumeroCuentaBancaria() : null;
     }
 
     /**

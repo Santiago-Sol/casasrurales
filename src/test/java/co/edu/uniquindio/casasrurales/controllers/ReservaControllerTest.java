@@ -53,11 +53,11 @@ class ReservaControllerTest {
 
         authentication = mock(Authentication.class);
         when(authentication.isAuthenticated()).thenReturn(true);
-        when(authentication.getName()).thenReturn("3001234567");
+        when(authentication.getName()).thenReturn("1");
 
         clienteMock = mock(Cliente.class);
         when(clienteMock.getIdUsuario()).thenReturn(1);
-        when(clienteRepository.findByTelefono("3001234567")).thenReturn(Optional.of(clienteMock));
+        when(clienteRepository.findById(1)).thenReturn(Optional.of(clienteMock));
 
         CasaRural casaMock = mock(CasaRural.class);
         when(casaMock.getPoblacion()).thenReturn("Armenia");
@@ -120,7 +120,7 @@ class ReservaControllerTest {
     @Test
     @DisplayName("HU9-REST-C03: Usuario no es cliente retorna FORBIDDEN")
     void testRealizarReserva_UsuarioNoEsCliente() {
-        when(clienteRepository.findByTelefono("3001234567")).thenReturn(Optional.empty());
+        when(clienteRepository.findById(1)).thenReturn(Optional.empty());
 
         ResponseEntity<?> respuesta = reservaController.realizarReserva(requestValido(), authentication);
 

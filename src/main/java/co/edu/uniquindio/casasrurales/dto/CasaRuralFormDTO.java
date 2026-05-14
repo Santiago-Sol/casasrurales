@@ -10,7 +10,6 @@ import jakarta.validation.constraints.Size;
  */
 public class CasaRuralFormDTO {
 
-    @NotNull(message = "El codigo de la casa es obligatorio")
     @Min(value = 1, message = "El codigo de la casa debe ser mayor a cero")
     private Integer codigoCasa;
 
@@ -36,7 +35,7 @@ public class CasaRuralFormDTO {
     @Min(value = 3, message = "La casa debe tener minimo 3 habitaciones")
     private Integer numHabitaciones;
 
-    @Min(value = 1, message = "La casa debe tener minimo 1 bano")
+    @Min(value = 2, message = "La casa debe tener minimo 2 banos")
     private Integer numBanos;
 
     @Min(value = 1, message = "La casa debe tener minimo 1 cocina")

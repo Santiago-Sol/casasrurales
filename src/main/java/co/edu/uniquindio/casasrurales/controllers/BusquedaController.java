@@ -2,7 +2,9 @@ package co.edu.uniquindio.casasrurales.controllers;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Date;
 
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -13,7 +15,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import co.edu.uniquindio.casasrurales.dto.CasaRuralDetalleDTO;
 import co.edu.uniquindio.casasrurales.dto.CasaRuralListadoDTO;
+import co.edu.uniquindio.casasrurales.dto.DisponibilidadCasaDTO;
 import co.edu.uniquindio.casasrurales.services.BusquedaCasasService;
+import co.edu.uniquindio.casasrurales.services.SistemaReservas;
 
 /**
  * API REST para búsqueda de casas rurales.
@@ -25,9 +29,11 @@ import co.edu.uniquindio.casasrurales.services.BusquedaCasasService;
 public class BusquedaController {
 
     private final BusquedaCasasService busquedaCasasService;
+    private final SistemaReservas sistemaReservas;
 
-    public BusquedaController(BusquedaCasasService busquedaCasasService) {
+    public BusquedaController(BusquedaCasasService busquedaCasasService, SistemaReservas sistemaReservas) {
         this.busquedaCasasService = busquedaCasasService;
+        this.sistemaReservas = sistemaReservas;
     }
 
     /**
@@ -116,6 +122,20 @@ public class BusquedaController {
             return ResponseEntity.ok(busquedaCasasService.obtenerPaquetesCasa(codigoCasa));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
+        }
+    }
+
+    @GetMapping("/{codigoCasa}/disponibilidad")
+    public ResponseEntity<?> consultarDisponibilidad(
+            @PathVariable int codigoCasa,
+            @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") Date fechaEntrada,
+            @RequestParam int numeroNoches) {
+        try {
+            DisponibilidadCasaDTO disponibilidad = sistemaReservas.consultarDisponibilidadDetallada(
+                    codigoCasa, fechaEntrada, numeroNoches);
+            return ResponseEntity.ok(disponibilidad);
+        } catch (NullPointerException | IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", ex.getMessage()));
         }
     }
 }

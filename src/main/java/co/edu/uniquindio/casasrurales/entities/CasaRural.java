@@ -266,6 +266,6 @@ public class CasaRural {
     public boolean esValida() {
         // Validación relajada temporalmente para permitir probar las reservas sin requerir 
         // tener sub-entidades (fotos, habitaciones, cocinas, baños) cargadas.
-        return true; 
+        return numCocinas >= 1 && numDormitorios >= 3 && numBanos >= 2;
     }
 }

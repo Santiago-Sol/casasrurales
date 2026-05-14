@@ -22,6 +22,7 @@ import org.springframework.http.ResponseEntity;
 import co.edu.uniquindio.casasrurales.dto.CasaRuralDetalleDTO;
 import co.edu.uniquindio.casasrurales.dto.CasaRuralListadoDTO;
 import co.edu.uniquindio.casasrurales.services.BusquedaCasasService;
+import co.edu.uniquindio.casasrurales.services.SistemaReservas;
 
 /**
  * Pruebas unitarias del controlador REST de busqueda de casas.
@@ -32,11 +33,13 @@ class BusquedaControllerTest {
 
     private BusquedaController busquedaController;
     private BusquedaCasasService busquedaCasasService;
+    private SistemaReservas sistemaReservas;
 
     @BeforeEach
     void setUp() {
         busquedaCasasService = mock(BusquedaCasasService.class);
-        busquedaController = new BusquedaController(busquedaCasasService);
+        sistemaReservas = mock(SistemaReservas.class);
+        busquedaController = new BusquedaController(busquedaCasasService, sistemaReservas);
     }
 
     @DisplayName("HU6-C01: GET /api/busqueda/por-poblacion retorna lista de casas")

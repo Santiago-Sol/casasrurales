@@ -2,6 +2,7 @@ package co.edu.uniquindio.casasrurales.repositories;
 
 import co.edu.uniquindio.casasrurales.entities.CasaRural;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
 
@@ -16,4 +17,7 @@ public interface CasaRuralRepository extends JpaRepository<CasaRural, Integer> {
     List<CasaRural> findByActivaTrue();
 
     List<CasaRural> findByPropietarioIdUsuario(int idPropietario);
+
+    @Query("select coalesce(max(c.codigoCasa), 0) from CasaRural c")
+    int obtenerMayorCodigoCasa();
 }

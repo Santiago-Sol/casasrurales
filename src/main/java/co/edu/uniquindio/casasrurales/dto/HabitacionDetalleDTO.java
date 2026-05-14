@@ -6,11 +6,17 @@ package co.edu.uniquindio.casasrurales.dto;
 public class HabitacionDetalleDTO {
 
     private String codigoHabitacion;
+    private int idHabitacion;
     private int numeroCamas;
     private String tipoCama;
     private boolean tieneBano;
 
     public HabitacionDetalleDTO(String codigoHabitacion, int numeroCamas, String tipoCama, boolean tieneBano) {
+        this(0, codigoHabitacion, numeroCamas, tipoCama, tieneBano);
+    }
+
+    public HabitacionDetalleDTO(int idHabitacion, String codigoHabitacion, int numeroCamas, String tipoCama, boolean tieneBano) {
+        this.idHabitacion = idHabitacion;
         this.codigoHabitacion = codigoHabitacion;
         this.numeroCamas = numeroCamas;
         this.tipoCama = tipoCama;
@@ -20,6 +26,10 @@ public class HabitacionDetalleDTO {
     // Getters
     public String getCodigoHabitacion() {
         return codigoHabitacion;
+    }
+
+    public int getIdHabitacion() {
+        return idHabitacion;
     }
 
     public int getNumeroCamas() {

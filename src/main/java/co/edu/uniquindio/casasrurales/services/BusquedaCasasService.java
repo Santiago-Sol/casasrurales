@@ -178,6 +178,7 @@ public class BusquedaCasasService {
         List<Habitacion> habitaciones = habitacionRepository.findByCasaRuralCodigoCasa(casa.getCodigoCasa());
         List<HabitacionDetalleDTO> habitacionesDTO = habitaciones.stream()
                 .map(h -> new HabitacionDetalleDTO(
+                        h.getIdHabitacion(),
                         h.getCodigoHabitacion(),
                         h.getNumeroCamas(),
                         h.getTipoCama().toString(),

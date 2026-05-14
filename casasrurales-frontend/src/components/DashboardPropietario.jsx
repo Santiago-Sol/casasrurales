@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import '../styles/dashboard.css'
 import GestionPaquetes from './GestionPaquetes'
+import GestionPagos from './GestionPagos'
 
 const formularioInicial = {
   codigoCasa: '',
@@ -10,7 +11,7 @@ const formularioInicial = {
   numComedores: 0,
   numPlazasGaraje: 0,
   numHabitaciones: 3,
-  numBanos: 1,
+  numBanos: 2,
   numCocinas: 1
 }
 
@@ -27,6 +28,7 @@ export default function DashboardPropietario() {
   const [formulario, setFormulario] = useState(formularioInicial)
   const [guardando, setGuardando] = useState(false)
   const [casaGestionandoPaquetes, setCasaGestionandoPaquetes] = useState(null)
+  const [gestionandoPagos, setGestionandoPagos] = useState(false)
 
   useEffect(() => {
     obtenerMisCasas()
@@ -121,8 +123,9 @@ export default function DashboardPropietario() {
     event.preventDefault()
     setGuardando(true)
 
+    const esEdicion = modoFormulario === 'editar' && casaEditando
     const payload = {
-      codigoCasa: Number(formulario.codigoCasa),
+      codigoCasa: esEdicion ? Number(formulario.codigoCasa) : null,
       nombrePropiedad: formulario.nombrePropiedad.trim(),
       poblacion: formulario.poblacion.trim(),
       descripcion: formulario.descripcion.trim(),
@@ -133,7 +136,6 @@ export default function DashboardPropietario() {
       numCocinas: Number(formulario.numCocinas)
     }
 
-    const esEdicion = modoFormulario === 'editar' && casaEditando
     const url = esEdicion
       ? `/api/propietario/mis-casas/${casaEditando.codigoCasa}`
       : '/api/propietario/mis-casas'
@@ -236,9 +238,14 @@ export default function DashboardPropietario() {
   return (
     <div className="dashboard-container">
       <div className="dashboard-header">
-        <button className="btn-primary-action" onClick={abrirModalCrear}>
-          + Registrar Casa
-        </button>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          <button className="btn-primary-action" onClick={abrirModalCrear}>
+            + Registrar Casa
+          </button>
+          <button className="btn-primary" onClick={() => setGestionandoPagos(true)}>
+            Pagos y Vencidas
+          </button>
+        </div>
         <h2>Mi Dashboard de Propietario</h2>
       </div>
 
@@ -323,19 +330,21 @@ export default function DashboardPropietario() {
           <div className="modal-contenido modal-formulario">
             <h3>{modoFormulario === 'crear' ? 'Registrar Casa' : 'Editar Casa'}</h3>
             <form className="formulario-casa" onSubmit={guardarCasa}>
-              <div className="campo-formulario">
-                <label htmlFor="codigoCasa">Codigo de la casa</label>
-                <input
-                  id="codigoCasa"
-                  name="codigoCasa"
-                  type="number"
-                  min="1"
-                  value={formulario.codigoCasa}
-                  onChange={actualizarFormulario}
-                  required
-                  disabled={modoFormulario === 'editar'}
-                />
-              </div>
+              {modoFormulario === 'editar' && (
+                <div className="campo-formulario">
+                  <label htmlFor="codigoCasa">Codigo de la casa</label>
+                  <input
+                    id="codigoCasa"
+                    name="codigoCasa"
+                    type="number"
+                    min="1"
+                    value={formulario.codigoCasa}
+                    onChange={actualizarFormulario}
+                    required
+                    disabled
+                  />
+                </div>
+              )}
 
               <div className="campo-formulario">
                 <label htmlFor="nombrePropiedad">Nombre</label>
@@ -382,7 +391,7 @@ export default function DashboardPropietario() {
                     id="numBanos"
                     name="numBanos"
                     type="number"
-                    min="1"
+                    min="2"
                     value={formulario.numBanos}
                     onChange={actualizarFormulario}
                     required
@@ -460,6 +469,11 @@ export default function DashboardPropietario() {
                   La cantidad de habitaciones, banos y cocinas se define al crear la casa.
                 </p>
               )}
+              {modoFormulario === 'crear' && (
+                <p className="advertencia">
+                  El sistema asignara automaticamente el codigo de la casa al registrarla.
+                </p>
+              )}
             </form>
           </div>
         </div>
@@ -499,6 +513,10 @@ export default function DashboardPropietario() {
           casa={casaGestionandoPaquetes}
           onClose={() => setCasaGestionandoPaquetes(null)}
         />
+      )}
+
+      {gestionandoPagos && (
+        <GestionPagos onClose={() => setGestionandoPagos(false)} />
       )}
     </div>
   )
