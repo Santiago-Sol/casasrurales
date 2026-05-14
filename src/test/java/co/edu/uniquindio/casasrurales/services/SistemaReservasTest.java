@@ -2,8 +2,11 @@ package co.edu.uniquindio.casasrurales.services;
 
 import co.edu.uniquindio.casasrurales.entities.CasaRural;
 import co.edu.uniquindio.casasrurales.entities.Cliente;
+import co.edu.uniquindio.casasrurales.entities.PaqueteAlquiler;
 import co.edu.uniquindio.casasrurales.entities.Reserva;
 import co.edu.uniquindio.casasrurales.enums.EstadoReserva;
+import co.edu.uniquindio.casasrurales.enums.ModalidadAlquiler;
+import co.edu.uniquindio.casasrurales.enums.TipoReserva;
 import co.edu.uniquindio.casasrurales.repositories.CasaRuralRepository;
 import co.edu.uniquindio.casasrurales.repositories.PropietarioRepository;
 import co.edu.uniquindio.casasrurales.repositories.ReservaRepository;
@@ -48,11 +51,20 @@ class SistemaReservasTest {
         when(casaValida.getPoblacion()).thenReturn("Armenia");
         when(casaValida.isActiva()).thenReturn(true);
         when(casaValida.esValida()).thenReturn(true);
-        when(casaValida.consultarDisponibilidad(any(Date.class), anyInt())).thenReturn("LIBRE");
+        when(casaValida.getHabitaciones()).thenReturn(List.of());
+        when(casaValida.getPaquetesAlquiler()).thenReturn(List.of(new PaqueteAlquiler(
+                fechaFutura(1),
+                fechaFutura(30),
+                ModalidadAlquiler.AMBAS,
+                500000,
+                120000,
+                true
+        )));
 
         clienteValido = mock(Cliente.class);
 
         when(casaRuralRepository.findById(1)).thenReturn(Optional.of(casaValida));
+        when(reservaRepository.findByCasaRuralCodigoCasa(1)).thenReturn(List.of());
         when(reservaRepository.save(any(Reserva.class))).thenAnswer(inv -> inv.getArgument(0));
     }
 
@@ -171,25 +183,51 @@ class SistemaReservasTest {
     // ─── TESTS DE DISPONIBILIDAD ─────────────────────────────────────────────
 
     @Test
-    @DisplayName("HU9-C10: Casa ya reservada lanza IllegalStateException con mensaje claro")
+    @DisplayName("HU9-C10: Casa ya reservada lanza IllegalStateException")
     void testRealizarReserva_CasaReservada() {
-        when(casaValida.consultarDisponibilidad(any(Date.class), anyInt())).thenReturn("RESERVADA");
+        Reserva reservaExistente = mock(Reserva.class);
+        when(reservaExistente.getEstado()).thenReturn(EstadoReserva.CONFIRMADA);
+        when(reservaExistente.getFechaEntrada()).thenReturn(fechaFutura(5));
+        when(reservaExistente.getNumeroNoches()).thenReturn(3);
+        when(reservaExistente.getTipoReserva()).thenReturn(TipoReserva.CASA_ENTERA);
+        when(reservaRepository.findByCasaRuralCodigoCasa(1)).thenReturn(List.of(reservaExistente));
 
         IllegalStateException ex = assertThrows(IllegalStateException.class, () ->
                 sistemaReservas.realizarReserva(1, clienteValido, fechaFutura(5), 3, List.of(), 200000)
         );
 
-        assertEquals("La casa ya tiene una reserva para las fechas solicitadas", ex.getMessage());
+        assertEquals("La casa no esta disponible", ex.getMessage());
     }
 
     @Test
-    @DisplayName("HU9-C11: Casa no disponible lanza IllegalStateException")
-    void testRealizarReserva_CasaNoDisponible() {
-        when(casaValida.consultarDisponibilidad(any(Date.class), anyInt())).thenReturn("NO_DISPONIBLE");
+    @DisplayName("HU9-C11: Casa sin paquete explicito no esta disponible")
+    void testRealizarReserva_CasaSinPaqueteExplicito() {
+        when(casaValida.getPaquetesAlquiler()).thenReturn(List.of());
 
-        assertThrows(IllegalStateException.class, () ->
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () ->
                 sistemaReservas.realizarReserva(1, clienteValido, fechaFutura(5), 3, List.of(), 200000)
         );
+
+        assertEquals("La casa no esta disponible", ex.getMessage());
+    }
+
+    @Test
+    @DisplayName("HU9-C14: Consulta detallada devuelve un dia por cada noche consultada")
+    void consultarDisponibilidadDetalladaDevuelveDiasDelPeriodo() {
+        var disponibilidad = sistemaReservas.consultarDisponibilidadDetallada(1, fechaFutura(5), 3);
+
+        assertEquals(3, disponibilidad.getDias().size());
+    }
+
+    @Test
+    @DisplayName("HU9-C15: Sin paquete explicito todos los dias son no disponibles")
+    void consultarDisponibilidadSinPaqueteEsNoDisponible() {
+        when(casaValida.getPaquetesAlquiler()).thenReturn(List.of());
+
+        var disponibilidad = sistemaReservas.consultarDisponibilidadDetallada(1, fechaFutura(5), 2);
+
+        assertTrue(disponibilidad.getDias().stream()
+                .allMatch(dia -> dia.getEstadoCasaEntera().name().equals("NO_DISPONIBLE")));
     }
 
     // ─── TESTS DE CONSULTAS ───────────────────────────────────────────────────

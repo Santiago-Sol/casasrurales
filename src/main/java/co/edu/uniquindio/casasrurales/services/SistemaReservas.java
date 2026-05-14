@@ -73,7 +73,16 @@ public class SistemaReservas {
         if (casa == null) {
             return "CASA_NO_ENCONTRADA";
         }
-        return casa.consultarDisponibilidad(fechaEntrada, numeroNoches);
+        DisponibilidadCasaDTO disponibilidad = consultarDisponibilidadDetallada(codigoCasa, fechaEntrada, numeroNoches);
+        if (disponibilidad.getDias().stream()
+                .allMatch(dia -> dia.getEstadoCasaEntera() == EstadoDisponibilidad.LIBRE)) {
+            return EstadoDisponibilidad.LIBRE.name();
+        }
+        if (disponibilidad.getDias().stream()
+                .anyMatch(dia -> dia.getEstadoCasaEntera() == EstadoDisponibilidad.RESERVADA)) {
+            return EstadoDisponibilidad.RESERVADA.name();
+        }
+        return EstadoDisponibilidad.NO_DISPONIBLE.name();
     }
 
     public DisponibilidadCasaDTO consultarDisponibilidadDetallada(int codigoCasa, Date fechaEntrada, int numeroNoches) {
@@ -225,29 +234,17 @@ public class SistemaReservas {
 
     private void validarDisponibilidad(CasaRural casa, Date fechaEntrada, int numeroNoches,
                                        List<Habitacion> habitaciones, TipoReserva tipoReserva) {
-        if (casa.getPaquetesAlquiler() != null && !casa.getPaquetesAlquiler().isEmpty()) {
-            DisponibilidadCasaDTO disponibilidad = consultarDisponibilidadDetallada(
-                    casa.getCodigoCasa(), fechaEntrada, numeroNoches);
+        DisponibilidadCasaDTO disponibilidad = consultarDisponibilidadDetallada(
+                casa.getCodigoCasa(), fechaEntrada, numeroNoches);
 
-            boolean disponible = switch (tipoReserva) {
-                case CASA_ENTERA -> disponibilidad.getDias().stream()
-                        .allMatch(dia -> dia.getEstadoCasaEntera() == EstadoDisponibilidad.LIBRE);
-                case POR_HABITACIONES -> disponibilidad.getDias().stream()
-                        .allMatch(dia -> habitacionesDisponibles(dia, habitaciones));
-            };
+        boolean disponible = switch (tipoReserva) {
+            case CASA_ENTERA -> disponibilidad.getDias().stream()
+                    .allMatch(dia -> dia.getEstadoCasaEntera() == EstadoDisponibilidad.LIBRE);
+            case POR_HABITACIONES -> disponibilidad.getDias().stream()
+                    .allMatch(dia -> habitacionesDisponibles(dia, habitaciones));
+        };
 
-            if (!disponible) {
-                throw new IllegalStateException("La casa no esta disponible");
-            }
-            return;
-        }
-
-        String disponibilidad = casa.consultarDisponibilidad(fechaEntrada, numeroNoches);
-        if ("RESERVADA".equals(disponibilidad)) {
-            throw new IllegalStateException("La casa ya tiene una reserva para las fechas solicitadas");
-        }
-
-        if (!"LIBRE".equals(disponibilidad)) {
+        if (!disponible) {
             throw new IllegalStateException("La casa no esta disponible");
         }
     }

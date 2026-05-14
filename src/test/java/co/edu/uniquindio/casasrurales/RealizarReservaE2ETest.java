@@ -6,9 +6,11 @@ import co.edu.uniquindio.casasrurales.entities.Cliente;
 import co.edu.uniquindio.casasrurales.entities.Cocina;
 import co.edu.uniquindio.casasrurales.entities.Foto;
 import co.edu.uniquindio.casasrurales.entities.Habitacion;
+import co.edu.uniquindio.casasrurales.entities.PaqueteAlquiler;
 import co.edu.uniquindio.casasrurales.entities.Propietario;
 import co.edu.uniquindio.casasrurales.entities.Reserva;
 import co.edu.uniquindio.casasrurales.enums.EstadoReserva;
+import co.edu.uniquindio.casasrurales.enums.ModalidadAlquiler;
 import co.edu.uniquindio.casasrurales.enums.TipoCama;
 import co.edu.uniquindio.casasrurales.enums.TipoReserva;
 import co.edu.uniquindio.casasrurales.repositories.CasaRuralRepository;
@@ -73,6 +75,14 @@ class RealizarReservaE2ETest {
         casaRural.agregarCocina(new Cocina());
         casaRural.agregarBano(new Bano());
         casaRural.agregarBano(new Bano());
+        casaRural.agregarPaqueteAlquiler(new PaqueteAlquiler(
+                fechaFutura(1),
+                fechaFutura(40),
+                ModalidadAlquiler.AMBAS,
+                500000,
+                120000,
+                true
+        ));
         casaRuralRepository.save(casaRural);
 
         // Cliente
