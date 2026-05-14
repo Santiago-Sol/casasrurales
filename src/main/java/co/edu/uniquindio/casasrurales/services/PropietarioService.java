@@ -238,9 +238,9 @@ public class PropietarioService {
             throw new IllegalArgumentException("No tienes permiso para dar de baja esta casa");
         }
 
-        // Validar que no hay reservas activas (confirmadas)
+        // Validar que no hay reservas activas o pendientes que bloqueen disponibilidad.
         List<Reserva> reservasActivas = reservaRepository.findByCasaRuralCodigoCasa(codigoCasa).stream()
-                .filter(r -> r.getEstado() == EstadoReserva.CONFIRMADA)
+                .filter(r -> r.getEstado() == EstadoReserva.CONFIRMADA || r.getEstado() == EstadoReserva.PENDIENTE_PAGO)
                 .collect(Collectors.toList());
 
         if (!reservasActivas.isEmpty()) {

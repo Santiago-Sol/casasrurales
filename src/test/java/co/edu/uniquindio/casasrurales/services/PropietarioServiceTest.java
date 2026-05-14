@@ -191,6 +191,89 @@ class PropietarioServiceTest {
     }
 
     @Test
+    @DisplayName("darDeBajaCasa desactiva la casa cuando pertenece al propietario y no tiene reservas activas")
+    void darDeBajaCasaExitosamente() {
+        Propietario propietario = new Propietario("3001234567", "dueno", "secret123", "123456");
+        propietario.setIdUsuario(8);
+        CasaRural casa = new CasaRural(15, "Salento", "La Montanita", "Cabana familiar", 1, 1, true);
+        casa.setPropietario(propietario);
+
+        when(propietarioRepository.findById(8)).thenReturn(Optional.of(propietario));
+        when(casaRuralRepository.findById(15)).thenReturn(Optional.of(casa));
+        when(reservaRepository.findByCasaRuralCodigoCasa(15)).thenReturn(List.of());
+
+        String respuesta = propietarioService.darDeBajaCasa(15, 8);
+
+        assertEquals("Casa dada de baja exitosamente", respuesta);
+        assertFalse(casa.isActiva());
+        verify(casaRuralRepository).save(casa);
+    }
+
+    @Test
+    @DisplayName("darDeBajaCasa rechaza casas con reservas confirmadas o pendientes")
+    void darDeBajaCasaRechazaReservasActivas() {
+        Propietario propietario = new Propietario("3001234567", "dueno", "secret123", "123456");
+        propietario.setIdUsuario(8);
+        CasaRural casa = new CasaRural(15, "Salento", "La Montanita", "Cabana familiar", 1, 1, true);
+        casa.setPropietario(propietario);
+
+        Reserva reservaConfirmada = mock(Reserva.class);
+        when(reservaConfirmada.getEstado()).thenReturn(EstadoReserva.CONFIRMADA);
+        Reserva reservaPendiente = mock(Reserva.class);
+        when(reservaPendiente.getEstado()).thenReturn(EstadoReserva.PENDIENTE_PAGO);
+
+        when(propietarioRepository.findById(8)).thenReturn(Optional.of(propietario));
+        when(casaRuralRepository.findById(15)).thenReturn(Optional.of(casa));
+        when(reservaRepository.findByCasaRuralCodigoCasa(15)).thenReturn(List.of(reservaConfirmada, reservaPendiente));
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> propietarioService.darDeBajaCasa(15, 8));
+
+        assertEquals("No puedes dar de baja la casa porque tiene 2 reserva(s) activa(s). Cancélalas primero.", ex.getMessage());
+        assertTrue(casa.isActiva());
+        verify(casaRuralRepository, never()).save(any(CasaRural.class));
+    }
+
+    @Test
+    @DisplayName("darDeBajaCasa rechaza cuando el propietario no es el dueno")
+    void darDeBajaCasaRechazaPropietarioIncorrecto() {
+        Propietario propietarioSolicitante = new Propietario("3001234567", "solicitante", "secret123", "123456");
+        propietarioSolicitante.setIdUsuario(8);
+        Propietario propietarioCasa = new Propietario("3007654321", "dueno", "secret123", "654321");
+        propietarioCasa.setIdUsuario(3);
+        CasaRural casa = new CasaRural(15, "Salento", "La Montanita", "Cabana familiar", 1, 1, true);
+        casa.setPropietario(propietarioCasa);
+
+        when(propietarioRepository.findById(8)).thenReturn(Optional.of(propietarioSolicitante));
+        when(casaRuralRepository.findById(15)).thenReturn(Optional.of(casa));
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> propietarioService.darDeBajaCasa(15, 8));
+
+        assertEquals("No tienes permiso para dar de baja esta casa", ex.getMessage());
+        assertTrue(casa.isActiva());
+        verify(casaRuralRepository, never()).save(any(CasaRural.class));
+    }
+
+    @Test
+    @DisplayName("reactivarCasa activa nuevamente una casa del propietario")
+    void reactivarCasaExitosamente() {
+        Propietario propietario = new Propietario("3001234567", "dueno", "secret123", "123456");
+        propietario.setIdUsuario(8);
+        CasaRural casa = new CasaRural(15, "Salento", "La Montanita", "Cabana familiar", 1, 1, false);
+        casa.setPropietario(propietario);
+
+        when(propietarioRepository.findById(8)).thenReturn(Optional.of(propietario));
+        when(casaRuralRepository.findById(15)).thenReturn(Optional.of(casa));
+
+        String respuesta = propietarioService.reactivarCasa(15, 8);
+
+        assertEquals("Casa reactivada exitosamente", respuesta);
+        assertTrue(casa.isActiva());
+        verify(casaRuralRepository).save(casa);
+    }
+
+    @Test
     @DisplayName("crearPaquete registra paquete valido sin solapar fechas")
     void crearPaqueteExitosamente() {
         Propietario propietario = new Propietario("3001234567", "dueno", "secret123", "123456");
