@@ -19,6 +19,7 @@ import co.edu.uniquindio.casasrurales.entities.Propietario;
 import co.edu.uniquindio.casasrurales.entities.Reserva;
 import co.edu.uniquindio.casasrurales.enums.EstadoPago;
 import co.edu.uniquindio.casasrurales.enums.EstadoReserva;
+import co.edu.uniquindio.casasrurales.enums.ModalidadAlquiler;
 import co.edu.uniquindio.casasrurales.enums.TipoCama;
 import co.edu.uniquindio.casasrurales.repositories.CasaRuralRepository;
 import co.edu.uniquindio.casasrurales.repositories.PropietarioRepository;
@@ -362,11 +363,7 @@ public class PropietarioService {
     @Transactional
     public PaqueteAlquilerDTO crearPaquete(int codigoCasa, int idPropietario, PaqueteAlquilerDTO dto) {
         CasaRural casa = obtenerCasaDelPropietario(codigoCasa, idPropietario);
-
-        // Validar fechas
-        if (dto.getFechaInicio().after(dto.getFechaFin())) {
-            throw new IllegalArgumentException("La fecha de inicio no puede ser posterior a la fecha de fin");
-        }
+        validarDatosPaquete(dto);
 
         // Validar solapamiento
         boolean solapamiento = casa.getPaquetesAlquiler().stream().anyMatch(p -> 
@@ -421,11 +418,7 @@ public class PropietarioService {
         }
         
         PaqueteAlquiler paquete = paqueteOpt.get();
-
-        // Validar fechas
-        if (dto.getFechaInicio().after(dto.getFechaFin())) {
-            throw new IllegalArgumentException("La fecha de inicio no puede ser posterior a la fecha de fin");
-        }
+        validarDatosPaquete(dto);
 
         // Validar solapamiento excluyendo el paquete actual
         boolean solapamiento = casa.getPaquetesAlquiler().stream()
@@ -493,6 +486,32 @@ public class PropietarioService {
                         paquete.isDisponible()
                 ))
                 .collect(Collectors.toList());
+    }
+
+    private void validarDatosPaquete(PaqueteAlquilerDTO dto) {
+        if (dto.getFechaInicio() == null || dto.getFechaFin() == null) {
+            throw new IllegalArgumentException("Las fechas del paquete son obligatorias");
+        }
+
+        if (dto.getFechaInicio().after(dto.getFechaFin())) {
+            throw new IllegalArgumentException("La fecha de inicio no puede ser posterior a la fecha de fin");
+        }
+
+        if (dto.getModalidad() == null) {
+            throw new IllegalArgumentException("La modalidad del paquete es obligatoria");
+        }
+
+        if (dto.getModalidad() == ModalidadAlquiler.CASA_ENTERA || dto.getModalidad() == ModalidadAlquiler.AMBAS) {
+            if (dto.getPrecioCasaEntera() <= 0) {
+                throw new IllegalArgumentException("El precio de casa entera debe ser mayor a cero");
+            }
+        }
+
+        if (dto.getModalidad() == ModalidadAlquiler.POR_HABITACIONES || dto.getModalidad() == ModalidadAlquiler.AMBAS) {
+            if (dto.getPrecioHabitacion() <= 0) {
+                throw new IllegalArgumentException("El precio por habitacion debe ser mayor a cero");
+            }
+        }
     }
 
     public List<ReservaPropietarioDTO> obtenerReservasPropietario(int idPropietario) {

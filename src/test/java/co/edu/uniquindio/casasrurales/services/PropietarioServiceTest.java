@@ -18,11 +18,14 @@ import org.junit.jupiter.api.Test;
 
 import co.edu.uniquindio.casasrurales.dto.CasaRuralFormDTO;
 import co.edu.uniquindio.casasrurales.dto.PagoRegistroDTO;
+import co.edu.uniquindio.casasrurales.dto.PaqueteAlquilerDTO;
 import co.edu.uniquindio.casasrurales.entities.CasaRural;
 import co.edu.uniquindio.casasrurales.entities.Pago;
+import co.edu.uniquindio.casasrurales.entities.PaqueteAlquiler;
 import co.edu.uniquindio.casasrurales.entities.Propietario;
 import co.edu.uniquindio.casasrurales.entities.Reserva;
 import co.edu.uniquindio.casasrurales.enums.EstadoReserva;
+import co.edu.uniquindio.casasrurales.enums.ModalidadAlquiler;
 import co.edu.uniquindio.casasrurales.repositories.CasaRuralRepository;
 import co.edu.uniquindio.casasrurales.repositories.PropietarioRepository;
 import co.edu.uniquindio.casasrurales.repositories.ReservaRepository;
@@ -185,6 +188,159 @@ class PropietarioServiceTest {
         List<?> resultado = propietarioService.obtenerCasasPropietario(8);
 
         assertFalse(resultado.isEmpty());
+    }
+
+    @Test
+    @DisplayName("crearPaquete registra paquete valido sin solapar fechas")
+    void crearPaqueteExitosamente() {
+        Propietario propietario = new Propietario("3001234567", "dueno", "secret123", "123456");
+        propietario.setIdUsuario(8);
+        CasaRural casa = new CasaRural(15, "Salento", "La Montanita", "Cabana familiar", 1, 1, true);
+        casa.setPropietario(propietario);
+
+        PaqueteAlquilerDTO dto = new PaqueteAlquilerDTO(
+                null,
+                java.sql.Date.valueOf("2026-06-01"),
+                java.sql.Date.valueOf("2026-06-05"),
+                ModalidadAlquiler.AMBAS,
+                450000,
+                120000,
+                true
+        );
+
+        when(casaRuralRepository.findById(15)).thenReturn(Optional.of(casa));
+
+        PaqueteAlquilerDTO resultado = propietarioService.crearPaquete(15, 8, dto);
+
+        assertEquals(ModalidadAlquiler.AMBAS, resultado.getModalidad());
+        assertEquals(450000, resultado.getPrecioCasaEntera());
+        assertEquals(120000, resultado.getPrecioHabitacion());
+        verify(paqueteAlquilerRepository).save(any(PaqueteAlquiler.class));
+    }
+
+    @Test
+    @DisplayName("crearPaquete rechaza fechas solapadas con paquetes existentes")
+    void crearPaqueteRechazaSolapamiento() {
+        Propietario propietario = new Propietario("3001234567", "dueno", "secret123", "123456");
+        propietario.setIdUsuario(8);
+        CasaRural casa = new CasaRural(15, "Salento", "La Montanita", "Cabana familiar", 1, 1, true);
+        casa.setPropietario(propietario);
+        casa.agregarPaqueteAlquiler(new PaqueteAlquiler(
+                java.sql.Date.valueOf("2026-06-01"),
+                java.sql.Date.valueOf("2026-06-05"),
+                ModalidadAlquiler.CASA_ENTERA,
+                450000,
+                0,
+                true
+        ));
+
+        PaqueteAlquilerDTO dto = new PaqueteAlquilerDTO(
+                null,
+                java.sql.Date.valueOf("2026-06-04"),
+                java.sql.Date.valueOf("2026-06-10"),
+                ModalidadAlquiler.POR_HABITACIONES,
+                0,
+                120000,
+                true
+        );
+
+        when(casaRuralRepository.findById(15)).thenReturn(Optional.of(casa));
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> propietarioService.crearPaquete(15, 8, dto));
+
+        assertEquals("Las fechas se solapan con un paquete existente de esta casa", ex.getMessage());
+        verify(paqueteAlquilerRepository, never()).save(any(PaqueteAlquiler.class));
+    }
+
+    @Test
+    @DisplayName("crearPaquete valida precios requeridos por modalidad")
+    void crearPaqueteRechazaPrecioInvalido() {
+        Propietario propietario = new Propietario("3001234567", "dueno", "secret123", "123456");
+        propietario.setIdUsuario(8);
+        CasaRural casa = new CasaRural(15, "Salento", "La Montanita", "Cabana familiar", 1, 1, true);
+        casa.setPropietario(propietario);
+
+        PaqueteAlquilerDTO dto = new PaqueteAlquilerDTO(
+                null,
+                java.sql.Date.valueOf("2026-06-01"),
+                java.sql.Date.valueOf("2026-06-05"),
+                ModalidadAlquiler.CASA_ENTERA,
+                0,
+                0,
+                true
+        );
+
+        when(casaRuralRepository.findById(15)).thenReturn(Optional.of(casa));
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> propietarioService.crearPaquete(15, 8, dto));
+
+        assertEquals("El precio de casa entera debe ser mayor a cero", ex.getMessage());
+        verify(paqueteAlquilerRepository, never()).save(any(PaqueteAlquiler.class));
+    }
+
+    @Test
+    @DisplayName("modificarPaquete actualiza modalidad y precios sin solapar")
+    void modificarPaqueteExitosamente() {
+        Propietario propietario = new Propietario("3001234567", "dueno", "secret123", "123456");
+        propietario.setIdUsuario(8);
+        CasaRural casa = new CasaRural(15, "Salento", "La Montanita", "Cabana familiar", 1, 1, true);
+        casa.setPropietario(propietario);
+        PaqueteAlquiler paquete = new PaqueteAlquiler(
+                java.sql.Date.valueOf("2026-06-01"),
+                java.sql.Date.valueOf("2026-06-05"),
+                ModalidadAlquiler.CASA_ENTERA,
+                450000,
+                0,
+                true
+        );
+        casa.agregarPaqueteAlquiler(paquete);
+
+        PaqueteAlquilerDTO dto = new PaqueteAlquilerDTO(
+                null,
+                java.sql.Date.valueOf("2026-06-02"),
+                java.sql.Date.valueOf("2026-06-06"),
+                ModalidadAlquiler.AMBAS,
+                500000,
+                130000,
+                true
+        );
+
+        when(casaRuralRepository.findById(15)).thenReturn(Optional.of(casa));
+        when(paqueteAlquilerRepository.findById(0)).thenReturn(Optional.of(paquete));
+
+        PaqueteAlquilerDTO resultado = propietarioService.modificarPaquete(15, 8, 0, dto);
+
+        assertEquals(ModalidadAlquiler.AMBAS, resultado.getModalidad());
+        assertEquals(500000, resultado.getPrecioCasaEntera());
+        assertEquals(130000, resultado.getPrecioHabitacion());
+        verify(paqueteAlquilerRepository).save(paquete);
+    }
+
+    @Test
+    @DisplayName("eliminarPaquete borra solo paquetes de la casa del propietario")
+    void eliminarPaqueteExitosamente() {
+        Propietario propietario = new Propietario("3001234567", "dueno", "secret123", "123456");
+        propietario.setIdUsuario(8);
+        CasaRural casa = new CasaRural(15, "Salento", "La Montanita", "Cabana familiar", 1, 1, true);
+        casa.setPropietario(propietario);
+        PaqueteAlquiler paquete = new PaqueteAlquiler(
+                java.sql.Date.valueOf("2026-06-01"),
+                java.sql.Date.valueOf("2026-06-05"),
+                ModalidadAlquiler.CASA_ENTERA,
+                450000,
+                0,
+                true
+        );
+        casa.agregarPaqueteAlquiler(paquete);
+
+        when(casaRuralRepository.findById(15)).thenReturn(Optional.of(casa));
+        when(paqueteAlquilerRepository.findById(0)).thenReturn(Optional.of(paquete));
+
+        propietarioService.eliminarPaquete(15, 8, 0);
+
+        verify(paqueteAlquilerRepository).delete(paquete);
     }
 
     @Test
