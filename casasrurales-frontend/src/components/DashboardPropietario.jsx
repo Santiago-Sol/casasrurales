@@ -11,6 +11,12 @@ const crearHabitacionesIniciales = (cantidad = 3) =>
     tieneBano: false
   }))
 
+const crearCocinasIniciales = (cantidad = 1) =>
+  Array.from({ length: cantidad }, () => ({
+    tieneLavavajillas: false,
+    tieneLavadora: false
+  }))
+
 const formularioInicial = {
   codigoCasa: '',
   nombrePropiedad: '',
@@ -22,7 +28,8 @@ const formularioInicial = {
   numBanos: 2,
   numCocinas: 1,
   fotos: '',
-  habitacionesDetalle: crearHabitacionesIniciales()
+  habitacionesDetalle: crearHabitacionesIniciales(),
+  cocinasDetalle: crearCocinasIniciales()
 }
 
 export default function DashboardPropietario() {
@@ -105,7 +112,8 @@ export default function DashboardPropietario() {
       numBanos: casa.banos ?? 1,
       numCocinas: casa.cocinas ?? 1,
       fotos: '',
-      habitacionesDetalle: crearHabitacionesIniciales(casa.habitaciones ?? 3)
+      habitacionesDetalle: crearHabitacionesIniciales(casa.habitaciones ?? 3),
+      cocinasDetalle: crearCocinasIniciales(casa.cocinas ?? 1)
     })
     setModalFormularioAbierto(true)
   }
@@ -130,6 +138,9 @@ export default function DashboardPropietario() {
       [name]: value,
       ...(name === 'numHabitaciones' && modoFormulario === 'crear'
         ? { habitacionesDetalle: ajustarHabitaciones(actual.habitacionesDetalle, Number(value)) }
+        : {}),
+      ...(name === 'numCocinas' && modoFormulario === 'crear'
+        ? { cocinasDetalle: ajustarCocinas(actual.cocinasDetalle, Number(value)) }
         : {})
     }))
   }
@@ -153,6 +164,27 @@ export default function DashboardPropietario() {
         index === indice
           ? { ...habitacion, [campo]: valor }
           : habitacion
+      ))
+    }))
+  }
+
+  const ajustarCocinas = (cocinasActuales, cantidad) => {
+    const total = Number.isFinite(cantidad) && cantidad > 0 ? cantidad : 0
+    return Array.from({ length: total }, (_, index) => (
+      cocinasActuales[index] ?? {
+        tieneLavavajillas: false,
+        tieneLavadora: false
+      }
+    ))
+  }
+
+  const actualizarCocina = (indice, campo, valor) => {
+    setFormulario((actual) => ({
+      ...actual,
+      cocinasDetalle: actual.cocinasDetalle.map((cocina, index) => (
+        index === indice
+          ? { ...cocina, [campo]: valor }
+          : cocina
       ))
     }))
   }
@@ -183,6 +215,12 @@ export default function DashboardPropietario() {
             numeroCamas: Number(habitacion.numeroCamas),
             tipoCama: habitacion.tipoCama,
             tieneBano: Boolean(habitacion.tieneBano)
+          })),
+      cocinas: esEdicion
+        ? []
+        : formulario.cocinasDetalle.map((cocina) => ({
+            tieneLavavajillas: Boolean(cocina.tieneLavavajillas),
+            tieneLavadora: Boolean(cocina.tieneLavadora)
           }))
     }
 
@@ -539,6 +577,35 @@ export default function DashboardPropietario() {
                           onChange={(event) => actualizarHabitacion(index, 'tieneBano', event.target.checked)}
                         />
                         Bano privado
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {modoFormulario === 'crear' && (
+                <div className="habitaciones-formulario">
+                  <h4>Datos de cocinas</h4>
+                  {formulario.cocinasDetalle.map((cocina, index) => (
+                    <div className="cocina-item" key={index}>
+                      <span>Cocina {index + 1}</span>
+                      <label className="checkbox-campo" htmlFor={`tieneLavavajillas-${index}`}>
+                        <input
+                          id={`tieneLavavajillas-${index}`}
+                          type="checkbox"
+                          checked={cocina.tieneLavavajillas}
+                          onChange={(event) => actualizarCocina(index, 'tieneLavavajillas', event.target.checked)}
+                        />
+                        Lavavajillas
+                      </label>
+                      <label className="checkbox-campo" htmlFor={`tieneLavadora-${index}`}>
+                        <input
+                          id={`tieneLavadora-${index}`}
+                          type="checkbox"
+                          checked={cocina.tieneLavadora}
+                          onChange={(event) => actualizarCocina(index, 'tieneLavadora', event.target.checked)}
+                        />
+                        Lavadora
                       </label>
                     </div>
                   ))}

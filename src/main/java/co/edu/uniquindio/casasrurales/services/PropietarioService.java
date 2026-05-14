@@ -9,6 +9,7 @@ import java.util.Date;
 
 import co.edu.uniquindio.casasrurales.dto.CasaRuralFormDTO;
 import co.edu.uniquindio.casasrurales.dto.CasaRuralPropietarioDTO;
+import co.edu.uniquindio.casasrurales.dto.CocinaFormDTO;
 import co.edu.uniquindio.casasrurales.dto.HabitacionFormDTO;
 import co.edu.uniquindio.casasrurales.dto.PagoRegistroDTO;
 import co.edu.uniquindio.casasrurales.dto.RegistroCasaForm;
@@ -170,6 +171,7 @@ public class PropietarioService {
         validarMinimosCreacion(form);
         validarFotosCreacion(form);
         validarHabitacionesCreacion(form);
+        validarCocinasCreacion(form);
 
         Propietario propietario = propietarioOpt.get();
         CasaRural casa = new CasaRural(
@@ -390,6 +392,26 @@ public class PropietarioService {
         }
     }
 
+    private void validarCocinasCreacion(CasaRuralFormDTO form) {
+        if (form.getCocinas() == null || form.getCocinas().size() != form.getNumCocinas()) {
+            throw new IllegalArgumentException("Debe registrar los datos de cada cocina");
+        }
+
+        for (CocinaFormDTO cocina : form.getCocinas()) {
+            if (cocina == null) {
+                throw new IllegalArgumentException("Debe registrar los datos de cada cocina");
+            }
+
+            if (cocina.getTieneLavavajillas() == null) {
+                throw new IllegalArgumentException("Debe indicar si cada cocina tiene lavavajillas");
+            }
+
+            if (cocina.getTieneLavadora() == null) {
+                throw new IllegalArgumentException("Debe indicar si cada cocina tiene lavadora");
+            }
+        }
+    }
+
     private void agregarEspaciosMinimos(CasaRural casa, CasaRuralFormDTO form) {
         form.getHabitaciones().stream()
                 .map(habitacion -> new Habitacion(
@@ -404,9 +426,9 @@ public class PropietarioService {
             casa.agregarBano(new Bano());
         }
 
-        for (int i = 0; i < form.getNumCocinas(); i++) {
-            casa.agregarCocina(new Cocina());
-        }
+        form.getCocinas().stream()
+                .map(cocina -> new Cocina(cocina.getTieneLavavajillas(), cocina.getTieneLavadora()))
+                .forEach(casa::agregarCocina);
     }
 
     private void agregarFotos(CasaRural casa, CasaRuralFormDTO form) {

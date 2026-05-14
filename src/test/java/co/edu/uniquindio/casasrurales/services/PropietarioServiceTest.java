@@ -17,6 +17,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import co.edu.uniquindio.casasrurales.dto.CasaRuralFormDTO;
+import co.edu.uniquindio.casasrurales.dto.CocinaFormDTO;
 import co.edu.uniquindio.casasrurales.dto.HabitacionFormDTO;
 import co.edu.uniquindio.casasrurales.dto.PagoRegistroDTO;
 import co.edu.uniquindio.casasrurales.dto.PaqueteAlquilerDTO;
@@ -74,6 +75,7 @@ class PropietarioServiceTest {
         form.setNumCocinas(1);
         form.setUrlsFotos(List.of("/uploads/casa-15.jpg"));
         form.setHabitaciones(habitacionesValidas());
+        form.setCocinas(cocinasValidas());
 
         when(propietarioRepository.findById(8)).thenReturn(Optional.of(propietario));
         when(casaRuralRepository.existsById(15)).thenReturn(false);
@@ -94,6 +96,9 @@ class PropietarioServiceTest {
         assertTrue(casa.getHabitaciones().get(1).isTieneBano());
         assertEquals(2, casa.getNumBanos());
         assertEquals(1, casa.getNumCocinas());
+        assertEquals(1, casa.getCocinas().size());
+        assertTrue(casa.getCocinas().getFirst().isTieneLavavajillas());
+        assertFalse(casa.getCocinas().getFirst().isTieneLavadora());
         assertEquals(1, casa.getFotos().size());
         verify(propietarioRepository, times(1)).save(any(Propietario.class));
     }
@@ -116,6 +121,7 @@ class PropietarioServiceTest {
         form.setNumCocinas(0);
         form.setUrlsFotos(List.of("/uploads/casa-15.jpg"));
         form.setHabitaciones(habitacionesValidas());
+        form.setCocinas(List.of());
 
         when(propietarioRepository.findById(8)).thenReturn(Optional.of(propietario));
         when(casaRuralRepository.existsById(15)).thenReturn(false);
@@ -145,6 +151,7 @@ class PropietarioServiceTest {
         form.setNumCocinas(1);
         form.setUrlsFotos(List.of("   "));
         form.setHabitaciones(habitacionesValidas());
+        form.setCocinas(cocinasValidas());
 
         when(propietarioRepository.findById(8)).thenReturn(Optional.of(propietario));
         when(casaRuralRepository.existsById(15)).thenReturn(false);
@@ -178,6 +185,7 @@ class PropietarioServiceTest {
                 habitacion("hab-1", 2, TipoCama.DOBLE, true),
                 habitacion("HAB-3", 1, TipoCama.SENCILLA, false)
         ));
+        form.setCocinas(cocinasValidas());
 
         when(propietarioRepository.findById(8)).thenReturn(Optional.of(propietario));
         when(casaRuralRepository.existsById(15)).thenReturn(false);
@@ -186,6 +194,36 @@ class PropietarioServiceTest {
                 () -> propietarioService.crearCasa(form, 8));
 
         assertEquals("El codigo de habitacion no puede repetirse dentro de la misma casa", ex.getMessage());
+        verify(propietarioRepository, never()).save(any(Propietario.class));
+    }
+
+    @Test
+    @DisplayName("crearCasa rechaza cuando no se registran los datos de cada cocina")
+    void crearCasaRechazaCocinasSinDetalle() {
+        Propietario propietario = new Propietario("3001234567", "dueno", "secret123", "123456");
+        propietario.setIdUsuario(8);
+
+        CasaRuralFormDTO form = new CasaRuralFormDTO();
+        form.setCodigoCasa(15);
+        form.setNombrePropiedad("La Montanita");
+        form.setPoblacion("Salento");
+        form.setDescripcion("Cabana familiar");
+        form.setNumComedores(2);
+        form.setNumPlazasGaraje(3);
+        form.setNumHabitaciones(3);
+        form.setNumBanos(2);
+        form.setNumCocinas(1);
+        form.setUrlsFotos(List.of("/uploads/casa-15.jpg"));
+        form.setHabitaciones(habitacionesValidas());
+        form.setCocinas(List.of());
+
+        when(propietarioRepository.findById(8)).thenReturn(Optional.of(propietario));
+        when(casaRuralRepository.existsById(15)).thenReturn(false);
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> propietarioService.crearCasa(form, 8));
+
+        assertEquals("Debe registrar los datos de cada cocina", ex.getMessage());
         verify(propietarioRepository, never()).save(any(Propietario.class));
     }
 
@@ -583,5 +621,12 @@ class PropietarioServiceTest {
         habitacion.setTipoCama(tipoCama);
         habitacion.setTieneBano(tieneBano);
         return habitacion;
+    }
+
+    private List<CocinaFormDTO> cocinasValidas() {
+        CocinaFormDTO cocina = new CocinaFormDTO();
+        cocina.setTieneLavavajillas(true);
+        cocina.setTieneLavadora(false);
+        return List.of(cocina);
     }
 }

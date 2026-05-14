@@ -47,6 +47,8 @@ public class CasaRuralFormDTO {
 
     private List<HabitacionFormDTO> habitaciones;
 
+    private List<CocinaFormDTO> cocinas;
+
     public Integer getCodigoCasa() {
         return codigoCasa;
     }
@@ -133,5 +135,13 @@ public class CasaRuralFormDTO {
 
     public void setHabitaciones(List<HabitacionFormDTO> habitaciones) {
         this.habitaciones = habitaciones;
+    }
+
+    public List<CocinaFormDTO> getCocinas() {
+        return cocinas;
+    }
+
+    public void setCocinas(List<CocinaFormDTO> cocinas) {
+        this.cocinas = cocinas;
     }
 }
