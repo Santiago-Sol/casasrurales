@@ -29,6 +29,7 @@ import co.edu.uniquindio.casasrurales.entities.Reserva;
 import co.edu.uniquindio.casasrurales.enums.EstadoReserva;
 import co.edu.uniquindio.casasrurales.enums.ModalidadAlquiler;
 import co.edu.uniquindio.casasrurales.enums.TipoCama;
+import co.edu.uniquindio.casasrurales.enums.TipoReserva;
 import co.edu.uniquindio.casasrurales.repositories.CasaRuralRepository;
 import co.edu.uniquindio.casasrurales.repositories.PropietarioRepository;
 import co.edu.uniquindio.casasrurales.repositories.ReservaRepository;
@@ -503,6 +504,7 @@ class PropietarioServiceTest {
 
         when(casaRuralRepository.findById(15)).thenReturn(Optional.of(casa));
         when(paqueteAlquilerRepository.findById(0)).thenReturn(Optional.of(paquete));
+        when(reservaRepository.findByCasaRuralCodigoCasa(15)).thenReturn(List.of());
 
         PaqueteAlquilerDTO resultado = propietarioService.modificarPaquete(15, 8, 0, dto);
 
@@ -510,6 +512,94 @@ class PropietarioServiceTest {
         assertEquals(500000, resultado.getPrecioCasaEntera());
         assertEquals(130000, resultado.getPrecioHabitacion());
         verify(paqueteAlquilerRepository).save(paquete);
+    }
+
+    @Test
+    @DisplayName("modificarPaquete rechaza cambios que dejan reservas existentes sin cobertura")
+    void modificarPaqueteRechazaReservaSinCobertura() {
+        Propietario propietario = new Propietario("3001234567", "dueno", "secret123", "123456");
+        propietario.setIdUsuario(8);
+        CasaRural casa = new CasaRural(15, "Salento", "La Montanita", "Cabana familiar", 1, 1, true);
+        casa.setPropietario(propietario);
+        PaqueteAlquiler paquete = new PaqueteAlquiler(
+                java.sql.Date.valueOf("2026-06-01"),
+                java.sql.Date.valueOf("2026-06-10"),
+                ModalidadAlquiler.CASA_ENTERA,
+                450000,
+                0,
+                true
+        );
+        casa.agregarPaqueteAlquiler(paquete);
+
+        Reserva reserva = mock(Reserva.class);
+        when(reserva.getEstado()).thenReturn(EstadoReserva.CONFIRMADA);
+        when(reserva.getFechaEntrada()).thenReturn(java.sql.Date.valueOf("2026-06-08"));
+        when(reserva.getNumeroNoches()).thenReturn(2);
+        when(reserva.getTipoReserva()).thenReturn(TipoReserva.CASA_ENTERA);
+
+        PaqueteAlquilerDTO dto = new PaqueteAlquilerDTO(
+                null,
+                java.sql.Date.valueOf("2026-06-01"),
+                java.sql.Date.valueOf("2026-06-05"),
+                ModalidadAlquiler.CASA_ENTERA,
+                450000,
+                0,
+                true
+        );
+
+        when(casaRuralRepository.findById(15)).thenReturn(Optional.of(casa));
+        when(paqueteAlquilerRepository.findById(0)).thenReturn(Optional.of(paquete));
+        when(reservaRepository.findByCasaRuralCodigoCasa(15)).thenReturn(List.of(reserva));
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> propietarioService.modificarPaquete(15, 8, 0, dto));
+
+        assertEquals("No se puede modificar el paquete porque dejaria reservas sin disponibilidad", ex.getMessage());
+        verify(paqueteAlquilerRepository, never()).save(any(PaqueteAlquiler.class));
+    }
+
+    @Test
+    @DisplayName("modificarPaquete rechaza modalidad incompatible con reservas existentes")
+    void modificarPaqueteRechazaModalidadIncompatibleConReserva() {
+        Propietario propietario = new Propietario("3001234567", "dueno", "secret123", "123456");
+        propietario.setIdUsuario(8);
+        CasaRural casa = new CasaRural(15, "Salento", "La Montanita", "Cabana familiar", 1, 1, true);
+        casa.setPropietario(propietario);
+        PaqueteAlquiler paquete = new PaqueteAlquiler(
+                java.sql.Date.valueOf("2026-06-01"),
+                java.sql.Date.valueOf("2026-06-10"),
+                ModalidadAlquiler.AMBAS,
+                450000,
+                120000,
+                true
+        );
+        casa.agregarPaqueteAlquiler(paquete);
+
+        Reserva reserva = mock(Reserva.class);
+        when(reserva.getEstado()).thenReturn(EstadoReserva.CONFIRMADA);
+        when(reserva.getFechaEntrada()).thenReturn(java.sql.Date.valueOf("2026-06-03"));
+        when(reserva.getNumeroNoches()).thenReturn(2);
+        when(reserva.getTipoReserva()).thenReturn(TipoReserva.POR_HABITACIONES);
+
+        PaqueteAlquilerDTO dto = new PaqueteAlquilerDTO(
+                null,
+                java.sql.Date.valueOf("2026-06-01"),
+                java.sql.Date.valueOf("2026-06-10"),
+                ModalidadAlquiler.CASA_ENTERA,
+                450000,
+                0,
+                true
+        );
+
+        when(casaRuralRepository.findById(15)).thenReturn(Optional.of(casa));
+        when(paqueteAlquilerRepository.findById(0)).thenReturn(Optional.of(paquete));
+        when(reservaRepository.findByCasaRuralCodigoCasa(15)).thenReturn(List.of(reserva));
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> propietarioService.modificarPaquete(15, 8, 0, dto));
+
+        assertEquals("No se puede cambiar la modalidad porque contradice reservas existentes", ex.getMessage());
+        verify(paqueteAlquilerRepository, never()).save(any(PaqueteAlquiler.class));
     }
 
     @Test
@@ -531,10 +621,44 @@ class PropietarioServiceTest {
 
         when(casaRuralRepository.findById(15)).thenReturn(Optional.of(casa));
         when(paqueteAlquilerRepository.findById(0)).thenReturn(Optional.of(paquete));
+        when(reservaRepository.findByCasaRuralCodigoCasa(15)).thenReturn(List.of());
 
         propietarioService.eliminarPaquete(15, 8, 0);
 
         verify(paqueteAlquilerRepository).delete(paquete);
+    }
+
+    @Test
+    @DisplayName("eliminarPaquete rechaza paquetes con reservas existentes")
+    void eliminarPaqueteRechazaReservasExistentes() {
+        Propietario propietario = new Propietario("3001234567", "dueno", "secret123", "123456");
+        propietario.setIdUsuario(8);
+        CasaRural casa = new CasaRural(15, "Salento", "La Montanita", "Cabana familiar", 1, 1, true);
+        casa.setPropietario(propietario);
+        PaqueteAlquiler paquete = new PaqueteAlquiler(
+                java.sql.Date.valueOf("2026-06-01"),
+                java.sql.Date.valueOf("2026-06-05"),
+                ModalidadAlquiler.CASA_ENTERA,
+                450000,
+                0,
+                true
+        );
+        casa.agregarPaqueteAlquiler(paquete);
+
+        Reserva reserva = mock(Reserva.class);
+        when(reserva.getEstado()).thenReturn(EstadoReserva.PENDIENTE_PAGO);
+        when(reserva.getFechaEntrada()).thenReturn(java.sql.Date.valueOf("2026-06-02"));
+        when(reserva.getNumeroNoches()).thenReturn(2);
+
+        when(casaRuralRepository.findById(15)).thenReturn(Optional.of(casa));
+        when(paqueteAlquilerRepository.findById(0)).thenReturn(Optional.of(paquete));
+        when(reservaRepository.findByCasaRuralCodigoCasa(15)).thenReturn(List.of(reserva));
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> propietarioService.eliminarPaquete(15, 8, 0));
+
+        assertEquals("No se puede eliminar un paquete con reservas existentes", ex.getMessage());
+        verify(paqueteAlquilerRepository, never()).delete(any(PaqueteAlquiler.class));
     }
 
     @Test

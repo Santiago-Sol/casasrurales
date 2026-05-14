@@ -499,6 +499,7 @@ public class PropietarioService {
         
         PaqueteAlquiler paquete = paqueteOpt.get();
         validarDatosPaquete(dto);
+        validarModificacionNoContradiceReservas(casa, paquete, dto);
 
         // Validar solapamiento excluyendo el paquete actual
         boolean solapamiento = casa.getPaquetesAlquiler().stream()
@@ -545,6 +546,8 @@ public class PropietarioService {
         if (paqueteOpt.isEmpty() || paqueteOpt.get().getCasaRural().getCodigoCasa() != codigoCasa) {
             throw new IllegalArgumentException("Paquete no encontrado para esta casa");
         }
+
+        validarEliminacionNoContradiceReservas(casa, paqueteOpt.get());
         
         paqueteAlquilerRepository.delete(paqueteOpt.get());
     }
@@ -592,6 +595,64 @@ public class PropietarioService {
                 throw new IllegalArgumentException("El precio por habitacion debe ser mayor a cero");
             }
         }
+    }
+
+    private void validarModificacionNoContradiceReservas(CasaRural casa, PaqueteAlquiler paqueteActual,
+                                                          PaqueteAlquilerDTO dto) {
+        List<Reserva> reservasAfectadas = reservasVigentesCubiertasPorPaquete(casa, paqueteActual);
+        for (Reserva reserva : reservasAfectadas) {
+            if (!dto.isDisponible()) {
+                throw new IllegalStateException("No se puede ocultar un paquete con reservas existentes");
+            }
+
+            if (!paqueteCubreReserva(dto.getFechaInicio(), dto.getFechaFin(), reserva)) {
+                throw new IllegalStateException("No se puede modificar el paquete porque dejaria reservas sin disponibilidad");
+            }
+
+            if (!modalidadSoportaReserva(dto.getModalidad(), reserva)) {
+                throw new IllegalStateException("No se puede cambiar la modalidad porque contradice reservas existentes");
+            }
+        }
+    }
+
+    private void validarEliminacionNoContradiceReservas(CasaRural casa, PaqueteAlquiler paquete) {
+        if (!reservasVigentesCubiertasPorPaquete(casa, paquete).isEmpty()) {
+            throw new IllegalStateException("No se puede eliminar un paquete con reservas existentes");
+        }
+    }
+
+    private List<Reserva> reservasVigentesCubiertasPorPaquete(CasaRural casa, PaqueteAlquiler paquete) {
+        return reservaRepository.findByCasaRuralCodigoCasa(casa.getCodigoCasa()).stream()
+                .filter(reserva -> reserva.getEstado() != EstadoReserva.ANULADA)
+                .filter(reserva -> fechasSeCruzan(
+                        paquete.getFechaInicio(),
+                        paquete.getFechaFin(),
+                        reserva.getFechaEntrada(),
+                        calcularFechaFinReserva(reserva)))
+                .collect(Collectors.toList());
+    }
+
+    private boolean paqueteCubreReserva(Date fechaInicioPaquete, Date fechaFinPaquete, Reserva reserva) {
+        Date fechaFinReserva = calcularFechaFinReserva(reserva);
+        return !reserva.getFechaEntrada().before(fechaInicioPaquete) && !fechaFinReserva.after(fechaFinPaquete);
+    }
+
+    private boolean modalidadSoportaReserva(ModalidadAlquiler modalidad, Reserva reserva) {
+        return switch (reserva.getTipoReserva()) {
+            case CASA_ENTERA -> modalidad == ModalidadAlquiler.CASA_ENTERA || modalidad == ModalidadAlquiler.AMBAS;
+            case POR_HABITACIONES -> modalidad == ModalidadAlquiler.POR_HABITACIONES || modalidad == ModalidadAlquiler.AMBAS;
+        };
+    }
+
+    private boolean fechasSeCruzan(Date inicioA, Date finA, Date inicioB, Date finB) {
+        return !finA.before(inicioB) && !finB.before(inicioA);
+    }
+
+    private Date calcularFechaFinReserva(Reserva reserva) {
+        java.util.Calendar calendar = java.util.Calendar.getInstance();
+        calendar.setTime(reserva.getFechaEntrada());
+        calendar.add(java.util.Calendar.DAY_OF_MONTH, reserva.getNumeroNoches() - 1);
+        return calendar.getTime();
     }
 
     public List<ReservaPropietarioDTO> obtenerReservasPropietario(int idPropietario) {
