@@ -1,5 +1,7 @@
 package co.edu.uniquindio.casasrurales.dto;
 
+import java.util.List;
+
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -40,6 +42,8 @@ public class CasaRuralFormDTO {
 
     @Min(value = 1, message = "La casa debe tener minimo 1 cocina")
     private Integer numCocinas;
+
+    private List<String> urlsFotos;
 
     public Integer getCodigoCasa() {
         return codigoCasa;
@@ -111,5 +115,13 @@ public class CasaRuralFormDTO {
 
     public void setNumCocinas(Integer numCocinas) {
         this.numCocinas = numCocinas;
+    }
+
+    public List<String> getUrlsFotos() {
+        return urlsFotos;
+    }
+
+    public void setUrlsFotos(List<String> urlsFotos) {
+        this.urlsFotos = urlsFotos;
     }
 }

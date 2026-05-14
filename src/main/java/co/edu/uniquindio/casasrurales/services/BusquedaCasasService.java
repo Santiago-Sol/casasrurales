@@ -66,6 +66,7 @@ public class BusquedaCasasService {
         
         return casas.stream()
                 .filter(CasaRural::isActiva)
+                .filter(casa -> casa.getPaquetesAlquiler().stream().anyMatch(paquete -> paquete.isDisponible()))
                 .map(this::convertirACasaListadoDTO)
                 .collect(Collectors.toList());
     }

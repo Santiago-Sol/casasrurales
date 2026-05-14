@@ -13,6 +13,7 @@ import co.edu.uniquindio.casasrurales.dto.ReservaPropietarioDTO;
 import co.edu.uniquindio.casasrurales.entities.Bano;
 import co.edu.uniquindio.casasrurales.entities.CasaRural;
 import co.edu.uniquindio.casasrurales.entities.Cocina;
+import co.edu.uniquindio.casasrurales.entities.Foto;
 import co.edu.uniquindio.casasrurales.entities.Habitacion;
 import co.edu.uniquindio.casasrurales.entities.Pago;
 import co.edu.uniquindio.casasrurales.entities.Propietario;
@@ -165,6 +166,7 @@ public class PropietarioService {
         }
 
         validarMinimosCreacion(form);
+        validarFotosCreacion(form);
 
         Propietario propietario = propietarioOpt.get();
         CasaRural casa = new CasaRural(
@@ -178,6 +180,7 @@ public class PropietarioService {
         );
 
         agregarEspaciosMinimos(casa, form);
+        agregarFotos(casa, form);
         propietario.darAltaCasa(casa);
         propietarioRepository.save(propietario);
 
@@ -344,6 +347,12 @@ public class PropietarioService {
         }
     }
 
+    private void validarFotosCreacion(CasaRuralFormDTO form) {
+        if (form.getUrlsFotos() == null || form.getUrlsFotos().stream().noneMatch(url -> url != null && !url.isBlank())) {
+            throw new IllegalArgumentException("Debe registrar al menos una foto de la casa");
+        }
+    }
+
     private void agregarEspaciosMinimos(CasaRural casa, CasaRuralFormDTO form) {
         for (int i = 1; i <= form.getNumHabitaciones(); i++) {
             casa.agregarHabitacion(new Habitacion("HAB-" + i, 1, TipoCama.SENCILLA, false));
@@ -356,6 +365,13 @@ public class PropietarioService {
         for (int i = 0; i < form.getNumCocinas(); i++) {
             casa.agregarCocina(new Cocina());
         }
+    }
+
+    private void agregarFotos(CasaRural casa, CasaRuralFormDTO form) {
+        form.getUrlsFotos().stream()
+                .filter(url -> url != null && !url.isBlank())
+                .map(url -> new Foto(url.trim(), null))
+                .forEach(casa::agregarFoto);
     }
     /**
      * HU-05: Crear un paquete de alquiler

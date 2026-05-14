@@ -12,7 +12,8 @@ const formularioInicial = {
   numPlazasGaraje: 0,
   numHabitaciones: 3,
   numBanos: 2,
-  numCocinas: 1
+  numCocinas: 1,
+  fotos: ''
 }
 
 export default function DashboardPropietario() {
@@ -93,7 +94,8 @@ export default function DashboardPropietario() {
       numPlazasGaraje: casa.plazasGaraje ?? 0,
       numHabitaciones: casa.habitaciones ?? 3,
       numBanos: casa.banos ?? 1,
-      numCocinas: casa.cocinas ?? 1
+      numCocinas: casa.cocinas ?? 1,
+      fotos: ''
     })
     setModalFormularioAbierto(true)
   }
@@ -133,7 +135,11 @@ export default function DashboardPropietario() {
       numPlazasGaraje: Number(formulario.numPlazasGaraje),
       numHabitaciones: Number(formulario.numHabitaciones),
       numBanos: Number(formulario.numBanos),
-      numCocinas: Number(formulario.numCocinas)
+      numCocinas: Number(formulario.numCocinas),
+      urlsFotos: formulario.fotos
+        .split('\n')
+        .map((url) => url.trim())
+        .filter(Boolean)
     }
 
     const url = esEdicion
@@ -440,6 +446,20 @@ export default function DashboardPropietario() {
                 </div>
               </div>
 
+              {modoFormulario === 'crear' && (
+                <div className="campo-formulario">
+                  <label htmlFor="fotos">Fotos</label>
+                  <textarea
+                    id="fotos"
+                    name="fotos"
+                    rows="3"
+                    value={formulario.fotos}
+                    onChange={actualizarFormulario}
+                    required
+                  />
+                </div>
+              )}
+
               <div className="campo-formulario">
                 <label htmlFor="descripcion">Descripcion</label>
                 <textarea
@@ -448,7 +468,6 @@ export default function DashboardPropietario() {
                   rows="4"
                   value={formulario.descripcion}
                   onChange={actualizarFormulario}
-                  required
                 />
               </div>
 
