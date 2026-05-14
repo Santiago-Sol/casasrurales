@@ -2,11 +2,14 @@ package co.edu.uniquindio.casasrurales.services;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.HashSet;
 import java.util.stream.Collectors;
 import java.util.Date;
 
 import co.edu.uniquindio.casasrurales.dto.CasaRuralFormDTO;
 import co.edu.uniquindio.casasrurales.dto.CasaRuralPropietarioDTO;
+import co.edu.uniquindio.casasrurales.dto.HabitacionFormDTO;
 import co.edu.uniquindio.casasrurales.dto.PagoRegistroDTO;
 import co.edu.uniquindio.casasrurales.dto.RegistroCasaForm;
 import co.edu.uniquindio.casasrurales.dto.ReservaPropietarioDTO;
@@ -21,7 +24,6 @@ import co.edu.uniquindio.casasrurales.entities.Reserva;
 import co.edu.uniquindio.casasrurales.enums.EstadoPago;
 import co.edu.uniquindio.casasrurales.enums.EstadoReserva;
 import co.edu.uniquindio.casasrurales.enums.ModalidadAlquiler;
-import co.edu.uniquindio.casasrurales.enums.TipoCama;
 import co.edu.uniquindio.casasrurales.repositories.CasaRuralRepository;
 import co.edu.uniquindio.casasrurales.repositories.PropietarioRepository;
 import co.edu.uniquindio.casasrurales.repositories.ReservaRepository;
@@ -167,6 +169,7 @@ public class PropietarioService {
 
         validarMinimosCreacion(form);
         validarFotosCreacion(form);
+        validarHabitacionesCreacion(form);
 
         Propietario propietario = propietarioOpt.get();
         CasaRural casa = new CasaRural(
@@ -353,10 +356,49 @@ public class PropietarioService {
         }
     }
 
-    private void agregarEspaciosMinimos(CasaRural casa, CasaRuralFormDTO form) {
-        for (int i = 1; i <= form.getNumHabitaciones(); i++) {
-            casa.agregarHabitacion(new Habitacion("HAB-" + i, 1, TipoCama.SENCILLA, false));
+    private void validarHabitacionesCreacion(CasaRuralFormDTO form) {
+        if (form.getHabitaciones() == null || form.getHabitaciones().size() != form.getNumHabitaciones()) {
+            throw new IllegalArgumentException("Debe registrar los datos de cada habitacion");
         }
+
+        Set<String> codigos = new HashSet<>();
+        for (HabitacionFormDTO habitacion : form.getHabitaciones()) {
+            if (habitacion == null) {
+                throw new IllegalArgumentException("Debe registrar los datos de cada habitacion");
+            }
+
+            if (habitacion.getCodigoHabitacion() == null || habitacion.getCodigoHabitacion().isBlank()) {
+                throw new IllegalArgumentException("El codigo de cada habitacion es obligatorio");
+            }
+
+            String codigoNormalizado = habitacion.getCodigoHabitacion().trim().toUpperCase();
+            if (!codigos.add(codigoNormalizado)) {
+                throw new IllegalArgumentException("El codigo de habitacion no puede repetirse dentro de la misma casa");
+            }
+
+            if (habitacion.getNumeroCamas() == null || habitacion.getNumeroCamas() < 1) {
+                throw new IllegalArgumentException("Cada habitacion debe tener al menos una cama");
+            }
+
+            if (habitacion.getTipoCama() == null) {
+                throw new IllegalArgumentException("El tipo de cama de cada habitacion es obligatorio");
+            }
+
+            if (habitacion.getTieneBano() == null) {
+                throw new IllegalArgumentException("Debe indicar si cada habitacion tiene bano");
+            }
+        }
+    }
+
+    private void agregarEspaciosMinimos(CasaRural casa, CasaRuralFormDTO form) {
+        form.getHabitaciones().stream()
+                .map(habitacion -> new Habitacion(
+                        habitacion.getCodigoHabitacion().trim(),
+                        habitacion.getNumeroCamas(),
+                        habitacion.getTipoCama(),
+                        habitacion.getTieneBano()
+                ))
+                .forEach(casa::agregarHabitacion);
 
         for (int i = 0; i < form.getNumBanos(); i++) {
             casa.agregarBano(new Bano());

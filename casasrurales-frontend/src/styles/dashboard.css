@@ -197,6 +197,8 @@
 
 .modal-formulario {
   max-width: 720px;
+  max-height: 90vh;
+  overflow-y: auto;
 }
 
 @keyframes slideIn {
@@ -245,7 +247,8 @@
 }
 
 .campo-formulario input,
-.campo-formulario textarea {
+.campo-formulario textarea,
+.campo-formulario select {
   width: 100%;
   padding: 0.8rem 0.9rem;
   border: 1px solid #d7dee5;
@@ -256,7 +259,8 @@
 }
 
 .campo-formulario input:focus,
-.campo-formulario textarea:focus {
+.campo-formulario textarea:focus,
+.campo-formulario select:focus {
   border-color: #4f46e5;
   box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
 }
@@ -264,6 +268,46 @@
 .campo-formulario textarea {
   resize: vertical;
   min-height: 110px;
+}
+
+.habitaciones-formulario {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 1rem;
+  background: #f8fafc;
+}
+
+.habitaciones-formulario h4 {
+  margin: 0 0 1rem;
+  color: #2c3e50;
+}
+
+.habitacion-item {
+  display: grid;
+  grid-template-columns: 1.2fr 0.7fr 1fr 0.8fr;
+  gap: 0.75rem;
+  align-items: end;
+  padding: 0.85rem 0;
+  border-top: 1px solid #e5e7eb;
+}
+
+.habitacion-item:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.checkbox-campo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  color: #2c3e50;
+  font-weight: 600;
+}
+
+.checkbox-campo input {
+  width: 18px;
+  height: 18px;
 }
 
 .modal-cuerpo p {
@@ -364,6 +408,10 @@
   }
 
   .formulario-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .habitacion-item {
     grid-template-columns: 1fr;
   }
 

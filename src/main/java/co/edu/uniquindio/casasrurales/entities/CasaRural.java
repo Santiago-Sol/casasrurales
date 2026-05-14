@@ -236,6 +236,12 @@ public class CasaRural {
     }
 
     public void agregarHabitacion(Habitacion habitacion) {
+        boolean codigoRepetido = habitaciones.stream()
+                .anyMatch(existente -> existente.getCodigoHabitacion()
+                        .equalsIgnoreCase(habitacion.getCodigoHabitacion()));
+        if (codigoRepetido) {
+            throw new IllegalArgumentException("El codigo de habitacion ya existe en esta casa");
+        }
         habitacion.setCasaRural(this);
         habitaciones.add(habitacion);
         numDormitorios = habitaciones.size();

@@ -4,6 +4,7 @@ import co.edu.uniquindio.casasrurales.dto.ReservaRequestDTO;
 import co.edu.uniquindio.casasrurales.dto.ReservaResumenDTO;
 import co.edu.uniquindio.casasrurales.entities.CasaRural;
 import co.edu.uniquindio.casasrurales.entities.Cliente;
+import co.edu.uniquindio.casasrurales.entities.Habitacion;
 import co.edu.uniquindio.casasrurales.entities.Reserva;
 import co.edu.uniquindio.casasrurales.enums.EstadoReserva;
 import co.edu.uniquindio.casasrurales.enums.TipoReserva;
@@ -128,6 +129,43 @@ class ReservaControllerTest {
         Map<?, ?> body = (Map<?, ?>) respuesta.getBody();
         assertNotNull(body);
         assertEquals("Solo los clientes pueden realizar reservas", body.get("error"));
+    }
+
+    @Test
+    @DisplayName("HU9-REST-C08: Rechaza habitaciones inexistentes")
+    void testRealizarReserva_HabitacionInexistente() {
+        ReservaRequestDTO dto = requestValido();
+        dto.setIdsHabitaciones(List.of(10));
+        when(habitacionRepository.findAllById(List.of(10))).thenReturn(List.of());
+
+        ResponseEntity<?> respuesta = reservaController.realizarReserva(dto, authentication);
+
+        assertEquals(HttpStatus.BAD_REQUEST, respuesta.getStatusCode());
+        Map<?, ?> body = (Map<?, ?>) respuesta.getBody();
+        assertNotNull(body);
+        assertEquals("Todas las habitaciones seleccionadas deben existir", body.get("error"));
+        verify(sistemaReservas, never()).realizarReserva(anyInt(), any(), any(), anyInt(), anyList(), anyDouble());
+    }
+
+    @Test
+    @DisplayName("HU9-REST-C09: Rechaza habitaciones de otra casa")
+    void testRealizarReserva_HabitacionDeOtraCasa() {
+        ReservaRequestDTO dto = requestValido();
+        dto.setIdsHabitaciones(List.of(10));
+
+        CasaRural otraCasa = mock(CasaRural.class);
+        when(otraCasa.getCodigoCasa()).thenReturn(99);
+        Habitacion habitacion = mock(Habitacion.class);
+        when(habitacion.getCasaRural()).thenReturn(otraCasa);
+        when(habitacionRepository.findAllById(List.of(10))).thenReturn(List.of(habitacion));
+
+        ResponseEntity<?> respuesta = reservaController.realizarReserva(dto, authentication);
+
+        assertEquals(HttpStatus.BAD_REQUEST, respuesta.getStatusCode());
+        Map<?, ?> body = (Map<?, ?>) respuesta.getBody();
+        assertNotNull(body);
+        assertEquals("Todas las habitaciones seleccionadas deben pertenecer a la casa reservada", body.get("error"));
+        verify(sistemaReservas, never()).realizarReserva(anyInt(), any(), any(), anyInt(), anyList(), anyDouble());
     }
 
     // ─── GET /api/reservas/mis-reservas ──────────────────────────────────────

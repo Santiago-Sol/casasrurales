@@ -13,6 +13,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -24,7 +25,13 @@ import java.util.List;
  * Se usa tanto para describir sus caracteristicas como para relacionarla con reservas.
  */
 @Entity
-@Table(name = "habitacion")
+@Table(
+        name = "habitacion",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_habitacion_casa_codigo",
+                columnNames = {"codigo_casa", "codigo_habitacion"}
+        )
+)
 public class Habitacion {
 
     @Id

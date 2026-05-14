@@ -71,6 +71,17 @@ public class ReservaController {
         List<Habitacion> habitaciones = List.of();
         if (requestDTO.getIdsHabitaciones() != null && !requestDTO.getIdsHabitaciones().isEmpty()) {
             habitaciones = habitacionRepository.findAllById(requestDTO.getIdsHabitaciones());
+            if (habitaciones.size() != requestDTO.getIdsHabitaciones().stream().distinct().count()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("error", "Todas las habitaciones seleccionadas deben existir"));
+            }
+            boolean algunaNoPertenece = habitaciones.stream()
+                    .anyMatch(habitacion -> habitacion.getCasaRural() == null
+                            || habitacion.getCasaRural().getCodigoCasa() != requestDTO.getCodigoCasa());
+            if (algunaNoPertenece) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("error", "Todas las habitaciones seleccionadas deben pertenecer a la casa reservada"));
+            }
         }
 
         try {

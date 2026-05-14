@@ -45,6 +45,8 @@ public class CasaRuralFormDTO {
 
     private List<String> urlsFotos;
 
+    private List<HabitacionFormDTO> habitaciones;
+
     public Integer getCodigoCasa() {
         return codigoCasa;
     }
@@ -123,5 +125,13 @@ public class CasaRuralFormDTO {
 
     public void setUrlsFotos(List<String> urlsFotos) {
         this.urlsFotos = urlsFotos;
+    }
+
+    public List<HabitacionFormDTO> getHabitaciones() {
+        return habitaciones;
+    }
+
+    public void setHabitaciones(List<HabitacionFormDTO> habitaciones) {
+        this.habitaciones = habitaciones;
     }
 }

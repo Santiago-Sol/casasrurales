@@ -3,6 +3,14 @@ import '../styles/dashboard.css'
 import GestionPaquetes from './GestionPaquetes'
 import GestionPagos from './GestionPagos'
 
+const crearHabitacionesIniciales = (cantidad = 3) =>
+  Array.from({ length: cantidad }, (_, index) => ({
+    codigoHabitacion: `HAB-${index + 1}`,
+    numeroCamas: 1,
+    tipoCama: 'SENCILLA',
+    tieneBano: false
+  }))
+
 const formularioInicial = {
   codigoCasa: '',
   nombrePropiedad: '',
@@ -13,7 +21,8 @@ const formularioInicial = {
   numHabitaciones: 3,
   numBanos: 2,
   numCocinas: 1,
-  fotos: ''
+  fotos: '',
+  habitacionesDetalle: crearHabitacionesIniciales()
 }
 
 export default function DashboardPropietario() {
@@ -95,7 +104,8 @@ export default function DashboardPropietario() {
       numHabitaciones: casa.habitaciones ?? 3,
       numBanos: casa.banos ?? 1,
       numCocinas: casa.cocinas ?? 1,
-      fotos: ''
+      fotos: '',
+      habitacionesDetalle: crearHabitacionesIniciales(casa.habitaciones ?? 3)
     })
     setModalFormularioAbierto(true)
   }
@@ -117,7 +127,33 @@ export default function DashboardPropietario() {
     const { name, value } = target
     setFormulario((actual) => ({
       ...actual,
-      [name]: value
+      [name]: value,
+      ...(name === 'numHabitaciones' && modoFormulario === 'crear'
+        ? { habitacionesDetalle: ajustarHabitaciones(actual.habitacionesDetalle, Number(value)) }
+        : {})
+    }))
+  }
+
+  const ajustarHabitaciones = (habitacionesActuales, cantidad) => {
+    const total = Number.isFinite(cantidad) && cantidad > 0 ? cantidad : 0
+    return Array.from({ length: total }, (_, index) => (
+      habitacionesActuales[index] ?? {
+        codigoHabitacion: `HAB-${index + 1}`,
+        numeroCamas: 1,
+        tipoCama: 'SENCILLA',
+        tieneBano: false
+      }
+    ))
+  }
+
+  const actualizarHabitacion = (indice, campo, valor) => {
+    setFormulario((actual) => ({
+      ...actual,
+      habitacionesDetalle: actual.habitacionesDetalle.map((habitacion, index) => (
+        index === indice
+          ? { ...habitacion, [campo]: valor }
+          : habitacion
+      ))
     }))
   }
 
@@ -139,7 +175,15 @@ export default function DashboardPropietario() {
       urlsFotos: formulario.fotos
         .split('\n')
         .map((url) => url.trim())
-        .filter(Boolean)
+        .filter(Boolean),
+      habitaciones: esEdicion
+        ? []
+        : formulario.habitacionesDetalle.map((habitacion) => ({
+            codigoHabitacion: habitacion.codigoHabitacion.trim(),
+            numeroCamas: Number(habitacion.numeroCamas),
+            tipoCama: habitacion.tipoCama,
+            tieneBano: Boolean(habitacion.tieneBano)
+          }))
     }
 
     const url = esEdicion
@@ -445,6 +489,61 @@ export default function DashboardPropietario() {
                   />
                 </div>
               </div>
+
+              {modoFormulario === 'crear' && (
+                <div className="habitaciones-formulario">
+                  <h4>Datos de habitaciones</h4>
+                  {formulario.habitacionesDetalle.map((habitacion, index) => (
+                    <div className="habitacion-item" key={index}>
+                      <div className="campo-formulario">
+                        <label htmlFor={`codigoHabitacion-${index}`}>Codigo</label>
+                        <input
+                          id={`codigoHabitacion-${index}`}
+                          type="text"
+                          value={habitacion.codigoHabitacion}
+                          onChange={(event) => actualizarHabitacion(index, 'codigoHabitacion', event.target.value)}
+                          required
+                        />
+                      </div>
+
+                      <div className="campo-formulario">
+                        <label htmlFor={`numeroCamas-${index}`}>Camas</label>
+                        <input
+                          id={`numeroCamas-${index}`}
+                          type="number"
+                          min="1"
+                          value={habitacion.numeroCamas}
+                          onChange={(event) => actualizarHabitacion(index, 'numeroCamas', event.target.value)}
+                          required
+                        />
+                      </div>
+
+                      <div className="campo-formulario">
+                        <label htmlFor={`tipoCama-${index}`}>Tipo de cama</label>
+                        <select
+                          id={`tipoCama-${index}`}
+                          value={habitacion.tipoCama}
+                          onChange={(event) => actualizarHabitacion(index, 'tipoCama', event.target.value)}
+                          required
+                        >
+                          <option value="SENCILLA">Sencilla</option>
+                          <option value="DOBLE">Doble</option>
+                        </select>
+                      </div>
+
+                      <label className="checkbox-campo" htmlFor={`tieneBano-${index}`}>
+                        <input
+                          id={`tieneBano-${index}`}
+                          type="checkbox"
+                          checked={habitacion.tieneBano}
+                          onChange={(event) => actualizarHabitacion(index, 'tieneBano', event.target.checked)}
+                        />
+                        Bano privado
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               {modoFormulario === 'crear' && (
                 <div className="campo-formulario">

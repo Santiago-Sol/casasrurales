@@ -17,6 +17,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import co.edu.uniquindio.casasrurales.dto.CasaRuralFormDTO;
+import co.edu.uniquindio.casasrurales.dto.HabitacionFormDTO;
 import co.edu.uniquindio.casasrurales.dto.PagoRegistroDTO;
 import co.edu.uniquindio.casasrurales.dto.PaqueteAlquilerDTO;
 import co.edu.uniquindio.casasrurales.entities.CasaRural;
@@ -26,6 +27,7 @@ import co.edu.uniquindio.casasrurales.entities.Propietario;
 import co.edu.uniquindio.casasrurales.entities.Reserva;
 import co.edu.uniquindio.casasrurales.enums.EstadoReserva;
 import co.edu.uniquindio.casasrurales.enums.ModalidadAlquiler;
+import co.edu.uniquindio.casasrurales.enums.TipoCama;
 import co.edu.uniquindio.casasrurales.repositories.CasaRuralRepository;
 import co.edu.uniquindio.casasrurales.repositories.PropietarioRepository;
 import co.edu.uniquindio.casasrurales.repositories.ReservaRepository;
@@ -71,6 +73,7 @@ class PropietarioServiceTest {
         form.setNumBanos(2);
         form.setNumCocinas(1);
         form.setUrlsFotos(List.of("/uploads/casa-15.jpg"));
+        form.setHabitaciones(habitacionesValidas());
 
         when(propietarioRepository.findById(8)).thenReturn(Optional.of(propietario));
         when(casaRuralRepository.existsById(15)).thenReturn(false);
@@ -85,6 +88,10 @@ class PropietarioServiceTest {
         assertEquals("Salento", casa.getPoblacion());
         assertTrue(casa.isActiva());
         assertEquals(3, casa.getNumDormitorios());
+        assertEquals("HAB-1", casa.getHabitaciones().get(0).getCodigoHabitacion());
+        assertEquals(2, casa.getHabitaciones().get(1).getNumeroCamas());
+        assertEquals(TipoCama.DOBLE, casa.getHabitaciones().get(1).getTipoCama());
+        assertTrue(casa.getHabitaciones().get(1).isTieneBano());
         assertEquals(2, casa.getNumBanos());
         assertEquals(1, casa.getNumCocinas());
         assertEquals(1, casa.getFotos().size());
@@ -108,6 +115,7 @@ class PropietarioServiceTest {
         form.setNumBanos(0);
         form.setNumCocinas(0);
         form.setUrlsFotos(List.of("/uploads/casa-15.jpg"));
+        form.setHabitaciones(habitacionesValidas());
 
         when(propietarioRepository.findById(8)).thenReturn(Optional.of(propietario));
         when(casaRuralRepository.existsById(15)).thenReturn(false);
@@ -136,6 +144,7 @@ class PropietarioServiceTest {
         form.setNumBanos(2);
         form.setNumCocinas(1);
         form.setUrlsFotos(List.of("   "));
+        form.setHabitaciones(habitacionesValidas());
 
         when(propietarioRepository.findById(8)).thenReturn(Optional.of(propietario));
         when(casaRuralRepository.existsById(15)).thenReturn(false);
@@ -144,6 +153,39 @@ class PropietarioServiceTest {
                 () -> propietarioService.crearCasa(form, 8));
 
         assertEquals("Debe registrar al menos una foto de la casa", ex.getMessage());
+        verify(propietarioRepository, never()).save(any(Propietario.class));
+    }
+
+    @Test
+    @DisplayName("crearCasa rechaza habitaciones con codigo repetido en la misma casa")
+    void crearCasaRechazaHabitacionesDuplicadas() {
+        Propietario propietario = new Propietario("3001234567", "dueno", "secret123", "123456");
+        propietario.setIdUsuario(8);
+
+        CasaRuralFormDTO form = new CasaRuralFormDTO();
+        form.setCodigoCasa(15);
+        form.setNombrePropiedad("La Montanita");
+        form.setPoblacion("Salento");
+        form.setDescripcion("Cabana familiar");
+        form.setNumComedores(2);
+        form.setNumPlazasGaraje(3);
+        form.setNumHabitaciones(3);
+        form.setNumBanos(2);
+        form.setNumCocinas(1);
+        form.setUrlsFotos(List.of("/uploads/casa-15.jpg"));
+        form.setHabitaciones(List.of(
+                habitacion("HAB-1", 1, TipoCama.SENCILLA, false),
+                habitacion("hab-1", 2, TipoCama.DOBLE, true),
+                habitacion("HAB-3", 1, TipoCama.SENCILLA, false)
+        ));
+
+        when(propietarioRepository.findById(8)).thenReturn(Optional.of(propietario));
+        when(casaRuralRepository.existsById(15)).thenReturn(false);
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> propietarioService.crearCasa(form, 8));
+
+        assertEquals("El codigo de habitacion no puede repetirse dentro de la misma casa", ex.getMessage());
         verify(propietarioRepository, never()).save(any(Propietario.class));
     }
 
@@ -524,5 +566,22 @@ class PropietarioServiceTest {
 
         verify(reserva).cancelar();
         verify(reservaRepository).save(reserva);
+    }
+
+    private List<HabitacionFormDTO> habitacionesValidas() {
+        return List.of(
+                habitacion("HAB-1", 1, TipoCama.SENCILLA, false),
+                habitacion("HAB-2", 2, TipoCama.DOBLE, true),
+                habitacion("HAB-3", 1, TipoCama.SENCILLA, false)
+        );
+    }
+
+    private HabitacionFormDTO habitacion(String codigo, int camas, TipoCama tipoCama, boolean tieneBano) {
+        HabitacionFormDTO habitacion = new HabitacionFormDTO();
+        habitacion.setCodigoHabitacion(codigo);
+        habitacion.setNumeroCamas(camas);
+        habitacion.setTipoCama(tipoCama);
+        habitacion.setTieneBano(tieneBano);
+        return habitacion;
     }
 }
