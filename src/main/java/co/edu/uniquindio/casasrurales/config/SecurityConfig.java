@@ -4,6 +4,7 @@ import java.util.Arrays;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -29,14 +30,19 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())  // Desabililar CSRF para APIs REST
                 .authorizeHttpRequests(auth -> auth
                         // Rutas públicas
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/auth/registro/**").permitAll()
                         .requestMatchers("/auth/login/**").permitAll()
                         .requestMatchers("/auth/me").authenticated()
                         // Búsqueda: clientes y propietarios autenticados
                         .requestMatchers("/api/busqueda/**").permitAll()
+                        // Operaciones privadas por rol
+                        .requestMatchers("/api/propietario/**").hasAnyAuthority("PROPIETARIO", "ROLE_PROPIETARIO")
+                        .requestMatchers("/api/reservas/**").hasAnyAuthority("CLIENTE", "ROLE_CLIENTE")
                         // Cualquier otra solicitud requiere autenticación
-                        .anyRequest().permitAll()
+                        .anyRequest().authenticated()
                 )
+                .formLogin(form -> form.disable())
                 .httpBasic(basic -> basic.disable());  // Desabilitar HTTP Basic Auth para APIs
 
         return http.build();
