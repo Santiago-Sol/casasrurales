@@ -68,30 +68,35 @@ public class ReservaController {
                     .body(Map.of("error", "Solo los clientes pueden realizar reservas"));
         }
 
-        List<Habitacion> habitaciones = List.of();
-        if (requestDTO.getIdsHabitaciones() != null && !requestDTO.getIdsHabitaciones().isEmpty()) {
-            habitaciones = habitacionRepository.findAllById(requestDTO.getIdsHabitaciones());
-            if (habitaciones.size() != requestDTO.getIdsHabitaciones().stream().distinct().count()) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body(Map.of("error", "Todas las habitaciones seleccionadas deben existir"));
-            }
-            boolean algunaNoPertenece = habitaciones.stream()
-                    .anyMatch(habitacion -> habitacion.getCasaRural() == null
-                            || habitacion.getCasaRural().getCodigoCasa() != requestDTO.getCodigoCasa());
-            if (algunaNoPertenece) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body(Map.of("error", "Todas las habitaciones seleccionadas deben pertenecer a la casa reservada"));
-            }
+        if (requestDTO.getTelefonoContacto() == null || requestDTO.getTelefonoContacto().isBlank()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", "El telefono de contacto es obligatorio"));
+        }
+
+        Cliente cliente = clienteOpt.get();
+        cliente.actualizarTelefono(requestDTO.getTelefonoContacto().trim());
+
+        List<Habitacion> habitaciones = resolverHabitaciones(requestDTO);
+        if (habitaciones == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", "Todas las habitaciones seleccionadas deben existir"));
+        }
+
+        boolean algunaNoPertenece = habitaciones.stream()
+                .anyMatch(habitacion -> habitacion.getCasaRural() == null
+                        || habitacion.getCasaRural().getCodigoCasa() != requestDTO.getCodigoCasa());
+        if (algunaNoPertenece) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", "Todas las habitaciones seleccionadas deben pertenecer a la casa reservada"));
         }
 
         try {
-            Reserva reserva = sistemaReservas.realizarReserva(
+            Reserva reserva = sistemaReservas.realizarReservaCalculandoImporte(
                     requestDTO.getCodigoCasa(),
-                    clienteOpt.get(),
+                    cliente,
                     requestDTO.getFechaEntrada(),
                     requestDTO.getNumeroNoches(),
-                    habitaciones,
-                    requestDTO.getImporteTotal()
+                    habitaciones
             );
 
             return ResponseEntity.status(HttpStatus.CREATED).body(crearResumen(reserva));
@@ -103,7 +108,39 @@ public class ReservaController {
                             requestDTO.getFechaEntrada(),
                             requestDTO.getNumeroNoches())
             ));
+        } catch (IllegalArgumentException | NullPointerException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", ex.getMessage()));
         }
+    }
+
+    private List<Habitacion> resolverHabitaciones(ReservaRequestDTO requestDTO) {
+        if (requestDTO.getCodigosHabitaciones() != null && !requestDTO.getCodigosHabitaciones().isEmpty()) {
+            List<String> codigos = requestDTO.getCodigosHabitaciones().stream()
+                    .filter(codigo -> codigo != null && !codigo.isBlank())
+                    .map(codigo -> codigo.trim())
+                    .distinct()
+                    .toList();
+            if (codigos.size() != requestDTO.getCodigosHabitaciones().size()) {
+                return null;
+            }
+            List<Habitacion> habitaciones = codigos.stream()
+                    .map(codigo -> habitacionRepository
+                            .findByCasaRuralCodigoCasaAndCodigoHabitacion(requestDTO.getCodigoCasa(), codigo)
+                            .orElse(null))
+                    .toList();
+            return habitaciones.stream().anyMatch(habitacion -> habitacion == null) ? null : habitaciones;
+        }
+
+        if (requestDTO.getIdsHabitaciones() != null && !requestDTO.getIdsHabitaciones().isEmpty()) {
+            long idsDistintos = requestDTO.getIdsHabitaciones().stream().distinct().count();
+            if (idsDistintos != requestDTO.getIdsHabitaciones().size()) {
+                return null;
+            }
+            List<Habitacion> habitaciones = habitacionRepository.findAllById(requestDTO.getIdsHabitaciones());
+            return habitaciones.size() != requestDTO.getIdsHabitaciones().size() ? null : habitaciones;
+        }
+
+        return List.of();
     }
 
     /**

@@ -23,6 +23,8 @@ public class ReservaResumenDTO {
     private String poblacionCasa;
     private int codigoCasa;
     private String cuentaCorrientePropietario;
+    private String conceptoPago;
+    private String advertenciaPago;
 
     public ReservaResumenDTO() {
     }
@@ -51,6 +53,8 @@ public class ReservaResumenDTO {
         this.poblacionCasa = poblacionCasa;
         this.codigoCasa = codigoCasa;
         this.cuentaCorrientePropietario = cuentaCorrientePropietario;
+        this.conceptoPago = String.valueOf(numeroReserva);
+        this.advertenciaPago = "Debe consignar el anticipo dentro de los 3 dias siguientes o la reserva podra quedar vencida para decision del propietario.";
     }
 
     public int getNumeroReserva() { return numeroReserva; }
@@ -65,4 +69,6 @@ public class ReservaResumenDTO {
     public String getPoblacionCasa() { return poblacionCasa; }
     public int getCodigoCasa() { return codigoCasa; }
     public String getCuentaCorrientePropietario() { return cuentaCorrientePropietario; }
+    public String getConceptoPago() { return conceptoPago; }
+    public String getAdvertenciaPago() { return advertenciaPago; }
 }

@@ -775,10 +775,12 @@ public class PropietarioService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional
     public List<ReservaPropietarioDTO> obtenerReservasVencidas(int idPropietario) {
         validarPropietarioExiste(idPropietario);
         return reservaRepository.findAll().stream()
                 .filter(reserva -> perteneceAlPropietario(reserva, idPropietario))
+                .peek(this::marcarVencidaSiCorresponde)
                 .filter(Reserva::estaVencida)
                 .map(this::convertirAReservaPropietarioDTO)
                 .collect(Collectors.toList());
@@ -800,6 +802,7 @@ public class PropietarioService {
         pago.registrar();
         reserva.agregarPago(pago);
         reserva.confirmar();
+        marcarVencidaSiCorresponde(reserva);
 
         pagoRepository.save(pago);
         reservaRepository.save(reserva);
@@ -825,6 +828,12 @@ public class PropietarioService {
             throw new IllegalStateException("La reserva no esta vencida");
         }
         return convertirAReservaPropietarioDTO(reserva);
+    }
+
+    private void marcarVencidaSiCorresponde(Reserva reserva) {
+        if (reserva.marcarVencidaSiCorresponde()) {
+            reservaRepository.save(reserva);
+        }
     }
 
     private void validarPropietarioExiste(int idPropietario) {

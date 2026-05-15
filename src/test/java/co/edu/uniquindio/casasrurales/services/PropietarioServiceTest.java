@@ -11,10 +11,12 @@ import static org.mockito.Mockito.when;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Date;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import co.edu.uniquindio.casasrurales.dto.CasaRuralFormDTO;
 import co.edu.uniquindio.casasrurales.dto.CocinaFormDTO;
@@ -26,6 +28,7 @@ import co.edu.uniquindio.casasrurales.entities.Pago;
 import co.edu.uniquindio.casasrurales.entities.PaqueteAlquiler;
 import co.edu.uniquindio.casasrurales.entities.Propietario;
 import co.edu.uniquindio.casasrurales.entities.Reserva;
+import co.edu.uniquindio.casasrurales.enums.EstadoPago;
 import co.edu.uniquindio.casasrurales.enums.EstadoReserva;
 import co.edu.uniquindio.casasrurales.enums.ModalidadAlquiler;
 import co.edu.uniquindio.casasrurales.enums.TipoCama;
@@ -878,6 +881,47 @@ class PropietarioServiceTest {
 
         verify(reserva).cancelar();
         verify(reservaRepository).save(reserva);
+    }
+
+    @Test
+    @DisplayName("RN93: Pago menor al anticipo no confirma la reserva")
+    void pagoInsuficienteNoConfirmaReserva() {
+        Reserva reserva = new Reserva(
+                new Date(),
+                2,
+                TipoReserva.CASA_ENTERA,
+                1000000,
+                EstadoReserva.PENDIENTE_PAGO,
+                null,
+                new CasaRural(15, "Salento", "La Montanita", "Cabana familiar", 1, 1, true),
+                List.of()
+        );
+
+        Pago pago = new Pago(new Date(), 100000, EstadoPago.PENDIENTE);
+        pago.registrar();
+        reserva.agregarPago(pago);
+        reserva.confirmar();
+
+        assertEquals(EstadoReserva.PENDIENTE_PAGO, reserva.getEstado());
+    }
+
+    @Test
+    @DisplayName("RN95: Reserva vencida sin anticipo queda marcada como VENCIDA")
+    void reservaVencidaSinAnticipoQuedaMarcada() {
+        Reserva reserva = new Reserva(
+                new Date(),
+                2,
+                TipoReserva.CASA_ENTERA,
+                1000000,
+                EstadoReserva.PENDIENTE_PAGO,
+                null,
+                new CasaRural(15, "Salento", "La Montanita", "Cabana familiar", 1, 1, true),
+                List.of()
+        );
+        ReflectionTestUtils.setField(reserva, "fechaLimitePago", new Date(System.currentTimeMillis() - 86_400_000));
+
+        assertTrue(reserva.marcarVencidaSiCorresponde());
+        assertEquals(EstadoReserva.VENCIDA, reserva.getEstado());
     }
 
     private List<HabitacionFormDTO> habitacionesValidas() {

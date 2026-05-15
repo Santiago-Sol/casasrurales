@@ -22,10 +22,14 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import co.edu.uniquindio.casasrurales.dto.CasaRuralDetalleDTO;
 import co.edu.uniquindio.casasrurales.dto.CasaRuralListadoDTO;
+import co.edu.uniquindio.casasrurales.entities.Bano;
 import co.edu.uniquindio.casasrurales.entities.CasaRural;
+import co.edu.uniquindio.casasrurales.entities.Cocina;
+import co.edu.uniquindio.casasrurales.entities.Habitacion;
 import co.edu.uniquindio.casasrurales.entities.PaqueteAlquiler;
 import co.edu.uniquindio.casasrurales.entities.Propietario;
 import co.edu.uniquindio.casasrurales.enums.ModalidadAlquiler;
+import co.edu.uniquindio.casasrurales.enums.TipoCama;
 import co.edu.uniquindio.casasrurales.repositories.BanoRepository;
 import co.edu.uniquindio.casasrurales.repositories.CasaRuralRepository;
 import co.edu.uniquindio.casasrurales.repositories.CocinaRepository;
@@ -144,5 +148,38 @@ class BusquedaCasasServiceTest {
         busquedaCasasService.buscarCasasPorPoblacion("  Salento  ");
 
         verify(casaRuralRepository, times(1)).findByPoblacionIgnoreCase("Salento");
+    }
+
+    @DisplayName("RN105-RN107: Detalle de casa incluye caracteristicas, habitaciones, banos y cocinas")
+    @Test
+    void obtenerDetalleCasaIncluyeCaracteristicasCompletas() {
+        Propietario propietario = new Propietario("3001234567", "dueno", "secret123", "123456");
+        CasaRural casa = new CasaRural(7, "Filandia", "Casa Laurel", "Vista al valle", 2, 1, true);
+        casa.setPropietario(propietario);
+        casa.agregarHabitacion(new Habitacion("HAB-101", 2, TipoCama.DOBLE, true));
+        casa.agregarBano(new Bano("Bano social"));
+        casa.agregarCocina(new Cocina(true, false));
+
+        Habitacion habitacion = new Habitacion("HAB-101", 2, TipoCama.DOBLE, true);
+        Bano bano = new Bano("Bano social");
+        Cocina cocina = new Cocina(true, false);
+
+        when(casaRuralRepository.findById(7)).thenReturn(Optional.of(casa));
+        when(habitacionRepository.findByCasaRuralCodigoCasa(7)).thenReturn(List.of(habitacion));
+        when(banoRepository.findByCasaRuralCodigoCasa(7)).thenReturn(List.of(bano));
+        when(cocinaRepository.findByCasaRuralCodigoCasa(7)).thenReturn(List.of(cocina));
+        when(fotoRepository.findByCasaRuralCodigoCasa(7)).thenReturn(List.of());
+
+        CasaRuralDetalleDTO detalle = busquedaCasasService.obtenerDetalleCasa(7);
+
+        assertEquals(7, detalle.getCodigoCasa());
+        assertEquals("Vista al valle", detalle.getDescripcionGeneral());
+        assertEquals(2, detalle.getNumComedores());
+        assertEquals(1, detalle.getNumPlazasGaraje());
+        assertEquals("HAB-101", detalle.getHabitaciones().get(0).getCodigoHabitacion());
+        assertEquals(2, detalle.getHabitaciones().get(0).getNumeroCamas());
+        assertTrue(detalle.getHabitaciones().get(0).isTieneBano());
+        assertEquals("Bano social", detalle.getBanos().get(0).getObservaciones());
+        assertTrue(detalle.getCocinas().get(0).isTieneLavavajillas());
     }
 }

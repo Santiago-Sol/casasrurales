@@ -176,12 +176,7 @@ public class Reserva {
     }
 
     public void confirmar() {
-        double totalPagado = pagos.stream()
-                .filter(pago -> pago.getEstado() == EstadoPago.VERIFICADO)
-                .map(Pago::getMonto)
-                .reduce(0.0, Double::sum);
-
-        if (totalPagado >= importeAnticipo) {
+        if (tieneAnticipoCubierto()) {
             estado = EstadoReserva.CONFIRMADA;
         }
     }
@@ -191,7 +186,26 @@ public class Reserva {
     }
 
     public boolean estaVencida() {
-        return estado == EstadoReserva.PENDIENTE_PAGO && new Date().after(fechaLimitePago);
+        return estado == EstadoReserva.VENCIDA
+                || (estado == EstadoReserva.PENDIENTE_PAGO
+                && !tieneAnticipoCubierto()
+                && fechaLimitePago != null
+                && new Date().after(fechaLimitePago));
+    }
+
+    public boolean marcarVencidaSiCorresponde() {
+        if (estado == EstadoReserva.PENDIENTE_PAGO && estaVencida()) {
+            estado = EstadoReserva.VENCIDA;
+            return true;
+        }
+        return false;
+    }
+
+    public boolean tieneAnticipoCubierto() {
+        return pagos.stream()
+                .filter(pago -> pago.getEstado() == EstadoPago.VERIFICADO)
+                .map(Pago::getMonto)
+                .reduce(0.0, Double::sum) >= importeAnticipo;
     }
 
     public String mostrarResumen() {

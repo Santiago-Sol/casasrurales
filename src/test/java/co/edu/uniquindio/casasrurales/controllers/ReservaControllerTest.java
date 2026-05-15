@@ -89,6 +89,7 @@ class ReservaControllerTest {
         dto.setFechaEntrada(fechaFutura(5));
         dto.setNumeroNoches(3);
         dto.setImporteTotal(300000.0);
+        dto.setTelefonoContacto("3001234567");
         dto.setIdsHabitaciones(List.of());
         return dto;
     }
@@ -98,7 +99,7 @@ class ReservaControllerTest {
     @Test
     @DisplayName("HU9-REST-C01: POST exitoso retorna CREATED con el numero de reserva")
     void testRealizarReserva_Exitosa() {
-        when(sistemaReservas.realizarReserva(anyInt(), any(), any(), anyInt(), anyList(), anyDouble()))
+        when(sistemaReservas.realizarReservaCalculandoImporte(anyInt(), any(), any(), anyInt(), anyList()))
                 .thenReturn(reservaMock);
 
         ResponseEntity<?> respuesta = reservaController.realizarReserva(requestValido(), authentication);
@@ -108,6 +109,8 @@ class ReservaControllerTest {
         assertNotNull(body);
         assertEquals(42, body.getNumeroReserva());
         assertEquals(EstadoReserva.PENDIENTE_PAGO, body.getEstado());
+        assertEquals("42", body.getConceptoPago());
+        assertNotNull(body.getAdvertenciaPago());
     }
 
     @Test
@@ -144,7 +147,7 @@ class ReservaControllerTest {
         Map<?, ?> body = (Map<?, ?>) respuesta.getBody();
         assertNotNull(body);
         assertEquals("Todas las habitaciones seleccionadas deben existir", body.get("error"));
-        verify(sistemaReservas, never()).realizarReserva(anyInt(), any(), any(), anyInt(), anyList(), anyDouble());
+        verify(sistemaReservas, never()).realizarReservaCalculandoImporte(anyInt(), any(), any(), anyInt(), anyList());
     }
 
     @Test
@@ -165,6 +168,55 @@ class ReservaControllerTest {
         Map<?, ?> body = (Map<?, ?>) respuesta.getBody();
         assertNotNull(body);
         assertEquals("Todas las habitaciones seleccionadas deben pertenecer a la casa reservada", body.get("error"));
+        verify(sistemaReservas, never()).realizarReservaCalculandoImporte(anyInt(), any(), any(), anyInt(), anyList());
+    }
+
+    @Test
+    @DisplayName("RN75: Rechaza reserva sin telefono de contacto")
+    void testRealizarReserva_TelefonoObligatorio() {
+        ReservaRequestDTO dto = requestValido();
+        dto.setTelefonoContacto(" ");
+
+        ResponseEntity<?> respuesta = reservaController.realizarReserva(dto, authentication);
+
+        assertEquals(HttpStatus.BAD_REQUEST, respuesta.getStatusCode());
+        Map<?, ?> body = (Map<?, ?>) respuesta.getBody();
+        assertNotNull(body);
+        assertEquals("El telefono de contacto es obligatorio", body.get("error"));
+        verify(sistemaReservas, never()).realizarReservaCalculandoImporte(anyInt(), any(), any(), anyInt(), anyList());
+    }
+
+    @Test
+    @DisplayName("RN63: Permite resolver habitaciones por codigo")
+    void testRealizarReserva_HabitacionesPorCodigo() {
+        ReservaRequestDTO dto = requestValido();
+        dto.setIdsHabitaciones(List.of());
+        dto.setCodigosHabitaciones(List.of("HAB-1"));
+
+        CasaRural casa = mock(CasaRural.class);
+        when(casa.getCodigoCasa()).thenReturn(1);
+        Habitacion habitacion = mock(Habitacion.class);
+        when(habitacion.getCasaRural()).thenReturn(casa);
+        when(habitacionRepository.findByCasaRuralCodigoCasaAndCodigoHabitacion(1, "HAB-1"))
+                .thenReturn(Optional.of(habitacion));
+        when(sistemaReservas.realizarReservaCalculandoImporte(eq(1), any(), any(), eq(3), anyList()))
+                .thenReturn(reservaMock);
+
+        ResponseEntity<?> respuesta = reservaController.realizarReserva(dto, authentication);
+
+        assertEquals(HttpStatus.CREATED, respuesta.getStatusCode());
+        verify(sistemaReservas).realizarReservaCalculandoImporte(eq(1), any(), any(), eq(3), eq(List.of(habitacion)));
+    }
+
+    @Test
+    @DisplayName("RN76: El controlador delega el calculo del importe al sistema")
+    void testRealizarReserva_DelegaCalculoImporte() {
+        when(sistemaReservas.realizarReservaCalculandoImporte(anyInt(), any(), any(), anyInt(), anyList()))
+                .thenReturn(reservaMock);
+
+        reservaController.realizarReserva(requestValido(), authentication);
+
+        verify(sistemaReservas).realizarReservaCalculandoImporte(anyInt(), any(), any(), anyInt(), anyList());
         verify(sistemaReservas, never()).realizarReserva(anyInt(), any(), any(), anyInt(), anyList(), anyDouble());
     }
 

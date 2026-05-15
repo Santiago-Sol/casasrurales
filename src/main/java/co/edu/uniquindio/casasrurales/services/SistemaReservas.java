@@ -161,6 +161,41 @@ public class SistemaReservas {
         return reservaRepository.save(reserva);
     }
 
+    public Reserva realizarReservaCalculandoImporte(int codigoCasa, Cliente cliente, Date fechaEntrada, int numeroNoches,
+                                                    List<Habitacion> habitaciones) {
+        CasaRural casa = Objects.requireNonNull(buscarCasaPorCodigo(codigoCasa), "La casa no existe");
+        validarCasaReservable(casa);
+        validarFechasReserva(fechaEntrada, numeroNoches);
+        TipoReserva tipoReserva = (habitaciones == null || habitaciones.isEmpty())
+                ? TipoReserva.CASA_ENTERA
+                : TipoReserva.POR_HABITACIONES;
+        validarDisponibilidad(casa, fechaEntrada, numeroNoches, habitaciones, tipoReserva);
+
+        double importeTotal = calcularImporteReserva(casa, fechaEntrada, numeroNoches, habitaciones, tipoReserva);
+        validarImporte(importeTotal);
+
+        Reserva reserva = new Reserva(
+                fechaEntrada,
+                numeroNoches,
+                tipoReserva,
+                importeTotal,
+                EstadoReserva.PENDIENTE_PAGO,
+                cliente,
+                casa,
+                habitaciones
+        );
+
+        casa.agregarReserva(reserva);
+        if (cliente != null) {
+            cliente.agregarReserva(reserva);
+        }
+        if (habitaciones != null) {
+            habitaciones.forEach(habitacion -> habitacion.agregarReserva(reserva));
+        }
+
+        return reservaRepository.save(reserva);
+    }
+
     public String mostrarResultadoConsulta() {
         return "Casas registradas: %d, reservas activas: %d"
                 .formatted(casaRuralRepository.count(), reservaRepository.count());
@@ -247,6 +282,21 @@ public class SistemaReservas {
         if (!disponible) {
             throw new IllegalStateException("La casa no esta disponible");
         }
+    }
+
+    private double calcularImporteReserva(CasaRural casa, Date fechaEntrada, int numeroNoches,
+                                          List<Habitacion> habitaciones, TipoReserva tipoReserva) {
+        Date fechaFin = sumarDias(fechaEntrada, numeroNoches - 1);
+        PaqueteAlquiler paquete = casa.getPaquetesAlquiler().stream()
+                .filter(p -> p.incluyeFecha(fechaEntrada) && p.incluyeFecha(fechaFin))
+                .filter(p -> tipoReserva == TipoReserva.CASA_ENTERA ? p.permiteCasaEntera() : p.permiteHabitaciones())
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("No existe un paquete que cubra la reserva completa"));
+
+        return switch (tipoReserva) {
+            case CASA_ENTERA -> paquete.getPrecioCasaEntera();
+            case POR_HABITACIONES -> paquete.getPrecioHabitacion() * habitaciones.size() * numeroNoches;
+        };
     }
 
     private DisponibilidadDiaDTO construirDisponibilidadDia(CasaRural casa, List<Reserva> reservas, Date fecha) {

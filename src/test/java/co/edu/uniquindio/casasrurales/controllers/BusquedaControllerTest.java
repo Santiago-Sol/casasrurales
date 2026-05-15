@@ -1,6 +1,7 @@
 package co.edu.uniquindio.casasrurales.controllers;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
@@ -21,6 +22,7 @@ import org.springframework.http.ResponseEntity;
 
 import co.edu.uniquindio.casasrurales.dto.CasaRuralDetalleDTO;
 import co.edu.uniquindio.casasrurales.dto.CasaRuralListadoDTO;
+import co.edu.uniquindio.casasrurales.dto.DisponibilidadCasaDTO;
 import co.edu.uniquindio.casasrurales.services.BusquedaCasasService;
 import co.edu.uniquindio.casasrurales.services.SistemaReservas;
 
@@ -185,5 +187,20 @@ class BusquedaControllerTest {
 
         assertEquals(HttpStatus.OK, respuesta.getStatusCode());
         verify(busquedaCasasService, times(1)).buscarCasaPorCodigo(3);
+    }
+
+    @DisplayName("RN97: Cliente puede consultar disponibilidad con codigo, fecha y noches")
+    @Test
+    void consultarDisponibilidad_OK() {
+        Date fechaEntrada = new Date();
+        DisponibilidadCasaDTO disponibilidad = new DisponibilidadCasaDTO(3, fechaEntrada, 2, List.of());
+        when(sistemaReservas.consultarDisponibilidadDetallada(3, fechaEntrada, 2))
+                .thenReturn(disponibilidad);
+
+        ResponseEntity<?> respuesta = busquedaController.consultarDisponibilidad(3, fechaEntrada, 2);
+
+        assertEquals(HttpStatus.OK, respuesta.getStatusCode());
+        assertEquals(disponibilidad, respuesta.getBody());
+        verify(sistemaReservas, times(1)).consultarDisponibilidadDetallada(3, fechaEntrada, 2);
     }
 }

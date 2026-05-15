@@ -2,6 +2,7 @@ package co.edu.uniquindio.casasrurales.dto;
 
 import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 import java.util.Date;
@@ -23,13 +24,14 @@ public class ReservaRequestDTO {
     @Min(value = 1, message = "El numero de noches debe ser al menos 1")
     private int numeroNoches;
 
-    @NotNull(message = "El importe total es obligatorio")
-    @Min(value = 0, message = "El importe total no puede ser negativo")
     private Double importeTotal;
 
+    @NotBlank(message = "El telefono de contacto es obligatorio")
     private String telefonoContacto;
 
     private List<Integer> idsHabitaciones;
+
+    private List<String> codigosHabitaciones;
 
     public Integer getCodigoCasa() {
         return codigoCasa;
@@ -69,6 +71,14 @@ public class ReservaRequestDTO {
 
     public void setIdsHabitaciones(List<Integer> idsHabitaciones) {
         this.idsHabitaciones = idsHabitaciones;
+    }
+
+    public List<String> getCodigosHabitaciones() {
+        return codigosHabitaciones;
+    }
+
+    public void setCodigosHabitaciones(List<String> codigosHabitaciones) {
+        this.codigosHabitaciones = codigosHabitaciones;
     }
 
     public String getTelefonoContacto() {
