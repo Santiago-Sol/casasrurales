@@ -58,7 +58,7 @@ class BusquedaCasasServiceTest {
     @InjectMocks
     private BusquedaCasasService busquedaCasasService;
 
-    @DisplayName("HU6-001: Buscar casas por poblacion retorna solo casas activas con paquetes disponibles")
+    @DisplayName("HU6-001/RN111: Buscar casas por poblacion retorna solo activas con paquetes disponibles")
     @Test
     void testBuscarCasasPorPoblacionConPaqueteActivo() {
         Propietario propietario = new Propietario("3001234567", "dueno", "secret123", "123456");
@@ -77,8 +77,19 @@ class BusquedaCasasServiceTest {
         CasaRural casaSinDisponibilidad = new CasaRural(2, "Salento", "Sin paquete", "No disponible", 1, 1, true);
         casaSinDisponibilidad.setPropietario(propietario);
 
+        CasaRural casaDadaDeBaja = new CasaRural(3, "Salento", "Dada de baja", "No reservable", 1, 1, false);
+        casaDadaDeBaja.setPropietario(propietario);
+        casaDadaDeBaja.agregarPaqueteAlquiler(new PaqueteAlquiler(
+                java.sql.Date.valueOf("2026-06-01"),
+                java.sql.Date.valueOf("2026-06-05"),
+                ModalidadAlquiler.CASA_ENTERA,
+                450000,
+                0,
+                true
+        ));
+
         when(casaRuralRepository.findByPoblacionIgnoreCase(anyString()))
-                .thenReturn(List.of(casaDisponible, casaSinDisponibilidad));
+                .thenReturn(List.of(casaDisponible, casaSinDisponibilidad, casaDadaDeBaja));
 
         List<CasaRuralListadoDTO> resultado = busquedaCasasService.buscarCasasPorPoblacion("Salento");
 

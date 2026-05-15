@@ -300,6 +300,17 @@ public class SistemaReservas {
     }
 
     private DisponibilidadDiaDTO construirDisponibilidadDia(CasaRural casa, List<Reserva> reservas, Date fecha) {
+        if (!casa.isActiva() || !casa.esValida()) {
+            List<DisponibilidadHabitacionDTO> habitacionesNoDisponibles = casa.getHabitaciones().stream()
+                    .map(habitacion -> new DisponibilidadHabitacionDTO(
+                            habitacion.getIdHabitacion(),
+                            habitacion.getCodigoHabitacion(),
+                            EstadoDisponibilidad.NO_DISPONIBLE))
+                    .toList();
+
+            return new DisponibilidadDiaDTO(fecha, EstadoDisponibilidad.NO_DISPONIBLE, null, habitacionesNoDisponibles);
+        }
+
         PaqueteAlquiler paquete = casa.getPaquetesAlquiler().stream()
                 .filter(p -> p.incluyeFecha(fecha))
                 .findFirst()

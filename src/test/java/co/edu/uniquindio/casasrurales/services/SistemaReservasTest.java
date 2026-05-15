@@ -232,6 +232,40 @@ class SistemaReservasTest {
                 .allMatch(dia -> dia.getEstadoCasaEntera().name().equals("NO_DISPONIBLE")));
     }
 
+    @Test
+    @DisplayName("RN111: Casa dada de baja se consulta como no disponible")
+    void consultarDisponibilidadCasaInactivaEsNoDisponible() {
+        Habitacion habitacion = mock(Habitacion.class);
+        when(habitacion.getIdHabitacion()).thenReturn(1);
+        when(habitacion.getCodigoHabitacion()).thenReturn("HAB-1");
+        when(casaValida.isActiva()).thenReturn(false);
+        when(casaValida.getHabitaciones()).thenReturn(List.of(habitacion));
+
+        var disponibilidad = sistemaReservas.consultarDisponibilidadDetallada(1, fechaFutura(5), 2);
+
+        assertTrue(disponibilidad.getDias().stream()
+                .allMatch(dia -> dia.getEstadoCasaEntera() == EstadoDisponibilidad.NO_DISPONIBLE));
+        assertTrue(disponibilidad.getDias().stream()
+                .flatMap(dia -> dia.getHabitaciones().stream())
+                .allMatch(habitacionDia -> habitacionDia.getEstado() == EstadoDisponibilidad.NO_DISPONIBLE));
+    }
+
+    @Test
+    @DisplayName("RN112-RN117: Estados validos de reserva y disponibilidad")
+    void estadosValidosDeReservaYDisponibilidad() {
+        assertEquals(List.of(
+                EstadoReserva.PENDIENTE_PAGO,
+                EstadoReserva.CONFIRMADA,
+                EstadoReserva.VENCIDA,
+                EstadoReserva.ANULADA
+        ), List.of(EstadoReserva.values()));
+        assertEquals(List.of(
+                EstadoDisponibilidad.LIBRE,
+                EstadoDisponibilidad.RESERVADA,
+                EstadoDisponibilidad.NO_DISPONIBLE
+        ), List.of(EstadoDisponibilidad.values()));
+    }
+
     // ─── TESTS DE CONSULTAS ───────────────────────────────────────────────────
 
     @Test

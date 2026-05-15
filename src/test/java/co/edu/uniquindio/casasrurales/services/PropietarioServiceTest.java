@@ -906,6 +906,28 @@ class PropietarioServiceTest {
     }
 
     @Test
+    @DisplayName("RN114: Pago suficiente confirma la reserva")
+    void pagoSuficienteConfirmaReserva() {
+        Reserva reserva = new Reserva(
+                new Date(),
+                2,
+                TipoReserva.CASA_ENTERA,
+                1000000,
+                EstadoReserva.PENDIENTE_PAGO,
+                null,
+                new CasaRural(15, "Salento", "La Montanita", "Cabana familiar", 1, 1, true),
+                List.of()
+        );
+
+        Pago pago = new Pago(new Date(), 200000, EstadoPago.PENDIENTE);
+        pago.registrar();
+        reserva.agregarPago(pago);
+        reserva.confirmar();
+
+        assertEquals(EstadoReserva.CONFIRMADA, reserva.getEstado());
+    }
+
+    @Test
     @DisplayName("RN95: Reserva vencida sin anticipo queda marcada como VENCIDA")
     void reservaVencidaSinAnticipoQuedaMarcada() {
         Reserva reserva = new Reserva(
@@ -921,6 +943,26 @@ class PropietarioServiceTest {
         ReflectionTestUtils.setField(reserva, "fechaLimitePago", new Date(System.currentTimeMillis() - 86_400_000));
 
         assertTrue(reserva.marcarVencidaSiCorresponde());
+        assertEquals(EstadoReserva.VENCIDA, reserva.getEstado());
+    }
+
+    @Test
+    @DisplayName("RN116: Vencimiento no anula automaticamente la reserva")
+    void vencimientoNoAnulaAutomaticamenteReserva() {
+        Reserva reserva = new Reserva(
+                new Date(),
+                2,
+                TipoReserva.CASA_ENTERA,
+                1000000,
+                EstadoReserva.PENDIENTE_PAGO,
+                null,
+                new CasaRural(15, "Salento", "La Montanita", "Cabana familiar", 1, 1, true),
+                List.of()
+        );
+        ReflectionTestUtils.setField(reserva, "fechaLimitePago", new Date(System.currentTimeMillis() - 86_400_000));
+
+        reserva.marcarVencidaSiCorresponde();
+
         assertEquals(EstadoReserva.VENCIDA, reserva.getEstado());
     }
 
