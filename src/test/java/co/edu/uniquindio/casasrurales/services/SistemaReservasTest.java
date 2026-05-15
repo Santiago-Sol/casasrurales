@@ -76,6 +76,17 @@ class SistemaReservasTest {
         return cal.getTime();
     }
 
+    private Date inicioDiaMas(Date fecha, int dias) {
+        Calendar cal = Calendar.getInstance();
+        cal.setTime(fecha);
+        cal.set(Calendar.HOUR_OF_DAY, 0);
+        cal.set(Calendar.MINUTE, 0);
+        cal.set(Calendar.SECOND, 0);
+        cal.set(Calendar.MILLISECOND, 0);
+        cal.add(Calendar.DAY_OF_MONTH, dias);
+        return cal.getTime();
+    }
+
     // ─── TESTS DE RESERVA EXITOSA ───────────────────────────────────────────
 
     @Test
@@ -162,6 +173,16 @@ class SistemaReservasTest {
         assertEquals("El numero de noches debe ser al menos 1", ex.getMessage());
     }
 
+    @Test
+    @DisplayName("RN119: Numero de noches negativo lanza IllegalArgumentException")
+    void realizarReservaRechazaNochesNegativas() {
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
+                sistemaReservas.realizarReserva(1, clienteValido, fechaFutura(5), -2, List.of(), 200000)
+        );
+
+        assertEquals("El numero de noches debe ser al menos 1", ex.getMessage());
+    }
+
     // ─── TESTS DE VALIDACION DE IMPORTE ─────────────────────────────────────
 
     @Test
@@ -219,6 +240,31 @@ class SistemaReservasTest {
         var disponibilidad = sistemaReservas.consultarDisponibilidadDetallada(1, fechaFutura(5), 3);
 
         assertEquals(3, disponibilidad.getDias().size());
+    }
+
+    @Test
+    @DisplayName("RN120-RN121: Calcula fecha de salida y periodo continuo")
+    void consultarDisponibilidadCalculaSalidaYDiasConsecutivos() {
+        Date fechaEntrada = fechaFutura(5);
+
+        var disponibilidad = sistemaReservas.consultarDisponibilidadDetallada(1, fechaEntrada, 3);
+
+        assertEquals(inicioDiaMas(fechaEntrada, 3), disponibilidad.getFechaSalida());
+        assertEquals(inicioDiaMas(fechaEntrada, 0), disponibilidad.getDias().get(0).getFecha());
+        assertEquals(inicioDiaMas(fechaEntrada, 1), disponibilidad.getDias().get(1).getFecha());
+        assertEquals(inicioDiaMas(fechaEntrada, 2), disponibilidad.getDias().get(2).getFecha());
+    }
+
+    @Test
+    @DisplayName("RN120: Reserva expone fecha de salida sumando las noches")
+    void reservaCalculaFechaSalida() {
+        Date fechaEntrada = fechaFutura(8);
+
+        Reserva reserva = sistemaReservas.realizarReserva(
+                1, clienteValido, fechaEntrada, 4, List.of(), 300000
+        );
+
+        assertEquals(inicioDiaMas(fechaEntrada, 4), inicioDiaMas(reserva.getFechaSalida(), 0));
     }
 
     @Test

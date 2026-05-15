@@ -206,6 +206,7 @@ export default function ReservaCasa({ casa, onClose }) {
           <div className="info-reserva" style={{ margin: '20px 0', padding: '15px', background: '#f5f5f5', borderRadius: '8px' }}>
             <p><strong>Numero de Reserva:</strong> {resumen.numeroReserva}</p>
             <p><strong>Fecha Entrada:</strong> {formatFecha(resumen.fechaEntrada)}</p>
+            <p><strong>Fecha Salida:</strong> {formatFecha(resumen.fechaSalida)}</p>
             <p><strong>Noches:</strong> {resumen.numeroNoches}</p>
             <p><strong>Importe Total:</strong> ${resumen.importeTotal.toLocaleString()}</p>
             <p><strong>Anticipo Requerido (20%):</strong> ${resumen.importeAnticipo.toLocaleString()}</p>

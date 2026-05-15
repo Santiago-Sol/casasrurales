@@ -417,6 +417,33 @@ class PropietarioServiceTest {
     }
 
     @Test
+    @DisplayName("RN123: Crear paquete rechaza fecha de inicio posterior a fecha final")
+    void crearPaqueteRechazaFechasIncoherentes() {
+        Propietario propietario = new Propietario("3001234567", "dueno", "secret123", "123456");
+        propietario.setIdUsuario(8);
+        CasaRural casa = new CasaRural(15, "Salento", "La Montanita", "Cabana familiar", 1, 1, true);
+        casa.setPropietario(propietario);
+
+        PaqueteAlquilerDTO dto = new PaqueteAlquilerDTO(
+                null,
+                java.sql.Date.valueOf("2026-06-10"),
+                java.sql.Date.valueOf("2026-06-01"),
+                ModalidadAlquiler.CASA_ENTERA,
+                450000,
+                0,
+                true
+        );
+
+        when(casaRuralRepository.findById(15)).thenReturn(Optional.of(casa));
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> propietarioService.crearPaquete(15, 8, dto));
+
+        assertEquals("La fecha de inicio no puede ser posterior a la fecha de fin", ex.getMessage());
+        verify(paqueteAlquilerRepository, never()).save(any(PaqueteAlquiler.class));
+    }
+
+    @Test
     @DisplayName("crearPaquete rechaza fechas solapadas con paquetes existentes")
     void crearPaqueteRechazaSolapamiento() {
         Propietario propietario = new Propietario("3001234567", "dueno", "secret123", "123456");

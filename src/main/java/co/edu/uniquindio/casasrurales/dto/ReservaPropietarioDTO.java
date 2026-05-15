@@ -3,6 +3,7 @@ package co.edu.uniquindio.casasrurales.dto;
 import co.edu.uniquindio.casasrurales.enums.EstadoReserva;
 import co.edu.uniquindio.casasrurales.enums.TipoReserva;
 
+import java.util.Calendar;
 import java.util.Date;
 
 /**
@@ -16,6 +17,7 @@ public class ReservaPropietarioDTO {
     private String poblacion;
     private Date fechaReserva;
     private Date fechaEntrada;
+    private Date fechaSalida;
     private int numeroNoches;
     private Date fechaLimitePago;
     private double importeTotal;
@@ -38,6 +40,7 @@ public class ReservaPropietarioDTO {
         this.fechaReserva = fechaReserva;
         this.fechaEntrada = fechaEntrada;
         this.numeroNoches = numeroNoches;
+        this.fechaSalida = calcularFechaSalida(fechaEntrada, numeroNoches);
         this.fechaLimitePago = fechaLimitePago;
         this.importeTotal = importeTotal;
         this.importeAnticipo = importeAnticipo;
@@ -52,6 +55,7 @@ public class ReservaPropietarioDTO {
     public String getPoblacion() { return poblacion; }
     public Date getFechaReserva() { return fechaReserva; }
     public Date getFechaEntrada() { return fechaEntrada; }
+    public Date getFechaSalida() { return fechaSalida; }
     public int getNumeroNoches() { return numeroNoches; }
     public Date getFechaLimitePago() { return fechaLimitePago; }
     public double getImporteTotal() { return importeTotal; }
@@ -59,4 +63,18 @@ public class ReservaPropietarioDTO {
     public EstadoReserva getEstado() { return estado; }
     public TipoReserva getTipoReserva() { return tipoReserva; }
     public boolean isVencida() { return vencida; }
+
+    private Date calcularFechaSalida(Date fechaEntrada, int numeroNoches) {
+        if (fechaEntrada == null || numeroNoches < 1) {
+            return null;
+        }
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(fechaEntrada);
+        calendar.set(Calendar.HOUR_OF_DAY, 0);
+        calendar.set(Calendar.MINUTE, 0);
+        calendar.set(Calendar.SECOND, 0);
+        calendar.set(Calendar.MILLISECOND, 0);
+        calendar.add(Calendar.DAY_OF_MONTH, numeroNoches);
+        return calendar.getTime();
+    }
 }
