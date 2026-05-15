@@ -86,6 +86,7 @@ public class PropietarioService {
 
         Propietario propietario = propietarioOpt.get();
         casa.setPropietario(propietario);
+        casa.registrarCreacionPor(propietario);
 
         casaRuralRepository.save(casa);
 
@@ -118,6 +119,7 @@ public class PropietarioService {
         casa.setDescripcionGeneral(form.getDescripcionGeneral());
         casa.setNumComedores(form.getNumComedores());
         casa.setNumPlazasGaraje(form.getNumPlazasGaraje());
+        casa.registrarModificacionPor(idPropietario);
 
         casaRuralRepository.save(casa);
 
@@ -186,6 +188,7 @@ public class PropietarioService {
 
         agregarEspaciosMinimos(casa, form);
         agregarFotos(casa, form);
+        casa.registrarCreacionPor(propietario);
         propietario.darAltaCasa(casa);
         propietarioRepository.save(propietario);
 
@@ -208,6 +211,7 @@ public class PropietarioService {
         casa.setDescripcionGeneral(form.getDescripcion() != null ? form.getDescripcion().trim() : null);
         casa.setNumComedores(form.getNumComedores());
         casa.setNumPlazasGaraje(form.getNumPlazasGaraje());
+        casa.registrarModificacionPor(idPropietario);
 
         casaRuralRepository.save(casa);
         return "Casa actualizada exitosamente";
@@ -260,6 +264,7 @@ public class PropietarioService {
 
         // Dar de baja la casa
         casa.setActiva(false);
+        casa.registrarModificacionPor(idPropietario);
         casaRuralRepository.save(casa);
 
         return "Casa dada de baja exitosamente";
@@ -292,6 +297,7 @@ public class PropietarioService {
         }
 
         casa.setActiva(true);
+        casa.registrarModificacionPor(idPropietario);
         casaRuralRepository.save(casa);
 
         return "Casa reactivada exitosamente";
@@ -356,6 +362,21 @@ public class PropietarioService {
         if (form.getUrlsFotos() == null || form.getUrlsFotos().stream().noneMatch(url -> url != null && !url.isBlank())) {
             throw new IllegalArgumentException("Debe registrar al menos una foto de la casa");
         }
+
+        boolean formatoInvalido = form.getUrlsFotos().stream()
+                .filter(url -> url != null && !url.isBlank())
+                .anyMatch(url -> !tieneFormatoImagenPermitido(url.trim()));
+        if (formatoInvalido) {
+            throw new IllegalArgumentException("Las fotos deben estar en formato JPG, PNG o WEBP");
+        }
+    }
+
+    private boolean tieneFormatoImagenPermitido(String rutaFoto) {
+        String rutaNormalizada = rutaFoto.toLowerCase();
+        return rutaNormalizada.endsWith(".jpg")
+                || rutaNormalizada.endsWith(".jpeg")
+                || rutaNormalizada.endsWith(".png")
+                || rutaNormalizada.endsWith(".webp");
     }
 
     private void validarHabitacionesCreacion(CasaRuralFormDTO form) {
@@ -464,6 +485,7 @@ public class PropietarioService {
                 dto.isDisponible()
         );
         paquete.setCasaRural(casa);
+        paquete.registrarCreacionPor(idPropietario);
         
         paqueteAlquilerRepository.save(paquete);
         
@@ -521,6 +543,7 @@ public class PropietarioService {
                 dto.getPrecioHabitacion(),
                 dto.isDisponible()
         );
+        paquete.registrarModificacionPor(idPropietario, "Modificacion de paquete de alquiler");
 
         paqueteAlquilerRepository.save(paquete);
 
@@ -579,6 +602,7 @@ public class PropietarioService {
                             dto.isDisponible()
                     );
                     paquete.setCasaRural(casa);
+                    paquete.registrarCreacionPor(idPropietario);
                     return paquete;
                 })
                 .collect(Collectors.toList());

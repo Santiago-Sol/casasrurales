@@ -54,6 +54,15 @@ public class PaqueteAlquiler {
     @Column(name = "disponible")
     private boolean disponible;
 
+    @Column(name = "creado_por_propietario")
+    private Integer creadoPorPropietario;
+
+    @Column(name = "modificado_por_propietario")
+    private Integer modificadoPorPropietario;
+
+    @Column(name = "auditoria_cambios", length = 500)
+    private String auditoriaCambios;
+
     @Temporal(TemporalType.DATE)
     @Column(name = "fecha_creacion", nullable = false)
     private Date fechaCreacion;
@@ -119,6 +128,18 @@ public class PaqueteAlquiler {
         return casaRural;
     }
 
+    public Integer getCreadoPorPropietario() {
+        return creadoPorPropietario;
+    }
+
+    public Integer getModificadoPorPropietario() {
+        return modificadoPorPropietario;
+    }
+
+    public String getAuditoriaCambios() {
+        return auditoriaCambios;
+    }
+
     public void setCasaRural(CasaRural casaRural) {
         this.casaRural = casaRural;
     }
@@ -174,8 +195,19 @@ public class PaqueteAlquiler {
         this.disponible = disponible;
     }
 
+    public void registrarCreacionPor(int idPropietario) {
+        creadoPorPropietario = idPropietario;
+        registrarModificacionPor(idPropietario, "Creacion del paquete");
+    }
+
+    public void registrarModificacionPor(int idPropietario, String detalle) {
+        modificadoPorPropietario = idPropietario;
+        auditoriaCambios = detalle == null || detalle.isBlank() ? "Cambio de paquete" : detalle;
+    }
+
     @PrePersist
     public void registrarFechasCreacion() {
+        validarIntegridad();
         validarPreciosObligatorios();
         Date ahora = new Date();
         fechaCreacion = ahora;
@@ -184,6 +216,7 @@ public class PaqueteAlquiler {
 
     @PreUpdate
     public void actualizarFechaModificacion() {
+        validarIntegridad();
         validarPreciosObligatorios();
         fechaModificacion = new Date();
     }
@@ -200,6 +233,12 @@ public class PaqueteAlquiler {
         }
         if (permiteHabitaciones() && precioHabitacion <= 0) {
             throw new IllegalArgumentException("El precio por habitacion debe ser mayor a cero");
+        }
+    }
+
+    public void validarIntegridad() {
+        if (casaRural == null) {
+            throw new IllegalStateException("El paquete debe estar asociado a una casa rural");
         }
     }
 

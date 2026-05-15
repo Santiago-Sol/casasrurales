@@ -188,6 +188,21 @@ class ReservaControllerTest {
     }
 
     @Test
+    @DisplayName("RN138: Rechaza telefono de contacto con formato invalido")
+    void testRealizarReserva_TelefonoFormatoInvalido() {
+        ReservaRequestDTO dto = requestValido();
+        dto.setTelefonoContacto("abc123");
+
+        ResponseEntity<?> respuesta = reservaController.realizarReserva(dto, authentication);
+
+        assertEquals(HttpStatus.BAD_REQUEST, respuesta.getStatusCode());
+        Map<?, ?> body = (Map<?, ?>) respuesta.getBody();
+        assertNotNull(body);
+        assertEquals("Ingresa un telefono valido", body.get("error"));
+        verify(sistemaReservas, never()).realizarReservaCalculandoImporte(anyInt(), any(), any(), anyInt(), anyList());
+    }
+
+    @Test
     @DisplayName("RN63: Permite resolver habitaciones por codigo")
     void testRealizarReserva_HabitacionesPorCodigo() {
         ReservaRequestDTO dto = requestValido();

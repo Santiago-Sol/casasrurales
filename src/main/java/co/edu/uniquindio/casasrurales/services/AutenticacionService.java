@@ -43,9 +43,11 @@ public class AutenticacionService {
     public void registrarPropietario(RegistroPropietarioForm form) {
         // Validar que el correo sea único
         validarCorreoUnico(form.getEmail());
+        validarNombreCuentaObligatorio(form.getNombreCuenta());
 
         // Validar que el nombre de cuenta sea único
-        validarNombreCuentaUnico(form.getNombreCuenta());
+        validarNombreCuentaUnico(form.getNombreCuenta().trim());
+        validarCuentaBancariaObligatoria(form.getNumeroCuentaBancaria());
 
         // Validar que la contraseña cumpla los requisitos mínimos
         validarRequsitosContrasena(form.getPassword());
@@ -56,7 +58,7 @@ public class AutenticacionService {
         // Crear la entidad Propietario
         Propietario propietario = new Propietario(
                 form.getTelefono(),
-                form.getNombreCuenta(),
+                form.getNombreCuenta().trim(),
                 passwordEncriptado,
                 form.getNumeroCuentaBancaria()
         );
@@ -114,6 +116,18 @@ public class AutenticacionService {
         }
     }
 
+    private void validarNombreCuentaObligatorio(String nombreCuenta) {
+        if (nombreCuenta == null || nombreCuenta.isBlank()) {
+            throw new IllegalArgumentException("El nombre de cuenta es obligatorio");
+        }
+    }
+
+    private void validarCuentaBancariaObligatoria(String numeroCuentaBancaria) {
+        if (numeroCuentaBancaria == null || numeroCuentaBancaria.isBlank()) {
+            throw new IllegalArgumentException("La cuenta bancaria del propietario es obligatoria");
+        }
+    }
+
     /**
      * Valida que la contraseña cumpla con los requisitos mínimos de seguridad.
      * - Mínimo 8 caracteres
@@ -122,7 +136,7 @@ public class AutenticacionService {
      * @throws IllegalArgumentException si la contraseña no cumple los requisitos
      */
     private void validarRequsitosContrasena(String password) {
-        if (password == null || password.length() < 8) {
+        if (password == null || password.isBlank() || password.length() < 8) {
             throw new IllegalArgumentException("La contraseña debe tener al menos 8 caracteres");
         }
     }
@@ -136,7 +150,11 @@ public class AutenticacionService {
      * @throws IllegalArgumentException si las credenciales son inválidas
      */
     public int autenticarPropietario(String nombreCuenta, String contrasena) {
-        Propietario propietario = propietarioRepository.findByNombreCuenta(nombreCuenta)
+        if (nombreCuenta == null || nombreCuenta.isBlank() || contrasena == null || contrasena.isBlank()) {
+            throw new IllegalArgumentException("Nombre de cuenta o contraseña incorrectos");
+        }
+
+        Propietario propietario = propietarioRepository.findByNombreCuenta(nombreCuenta.trim())
                 .orElseThrow(() -> new IllegalArgumentException("Nombre de cuenta o contraseña incorrectos"));
         
         if (!passwordEncoder.matches(contrasena, propietario.getContrasena())) {
@@ -155,7 +173,11 @@ public class AutenticacionService {
      * @throws IllegalArgumentException si las credenciales son inválidas
      */
     public int autenticarCliente(String email, String contrasena) {
-        Cuenta cuenta = cuentaRepository.findByEmail(email)
+        if (email == null || email.isBlank() || contrasena == null || contrasena.isBlank()) {
+            throw new IllegalArgumentException("Email o contraseña incorrectos");
+        }
+
+        Cuenta cuenta = cuentaRepository.findByEmail(email.trim())
                 .orElseThrow(() -> new IllegalArgumentException("Email o contraseña incorrectos"));
         
         if (!passwordEncoder.matches(contrasena, cuenta.getPassword())) {

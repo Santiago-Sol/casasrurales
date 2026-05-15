@@ -72,6 +72,10 @@ public class ReservaController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("error", "El telefono de contacto es obligatorio"));
         }
+        if (!requestDTO.getTelefonoContacto().matches("^[0-9+\\- ]{7,20}$")) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", "Ingresa un telefono valido"));
+        }
 
         Cliente cliente = clienteOpt.get();
         cliente.actualizarTelefono(requestDTO.getTelefonoContacto().trim());

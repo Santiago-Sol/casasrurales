@@ -75,6 +75,10 @@ export default function GestionPagos({ onClose }) {
   };
 
   const gestionarVencida = async (numeroReserva, accion) => {
+    if (accion === 'anular' && !window.confirm(`Seguro que deseas anular la reserva ${numeroReserva}?`)) {
+      return;
+    }
+
     setProcesando(true);
     try {
       const response = await fetch(`/api/propietario/reservas/${numeroReserva}/${accion}`, {
@@ -103,6 +107,11 @@ export default function GestionPagos({ onClose }) {
       <div className="modal-contenido" style={{ maxWidth: '980px' }}>
         <h3>Pagos y reservas vencidas</h3>
         {mensaje && <div className={`mensaje ${tipoMensaje}`}>{mensaje}</div>}
+        {!cargando && vencidas.length > 0 && (
+          <div className="mensaje warning">
+            Tienes {vencidas.length} reserva(s) vencida(s) pendiente(s) de gestion.
+          </div>
+        )}
 
         {cargando ? (
           <p>Cargando reservas...</p>

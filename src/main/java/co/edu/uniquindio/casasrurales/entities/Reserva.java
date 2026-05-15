@@ -39,7 +39,7 @@ public class Reserva {
     @Column(name = "numero_reserva")
     private int numeroReserva;
 
-    @Temporal(TemporalType.DATE)
+    @Temporal(TemporalType.TIMESTAMP)
     @Column(name = "fecha_reserva", nullable = false)
     private Date fechaReserva;
 
@@ -60,7 +60,10 @@ public class Reserva {
     @Column(name = "importe_anticipo")
     private double importeAnticipo;
 
-    @Temporal(TemporalType.DATE)
+    @Column(name = "telefono_contacto_cliente", nullable = false, length = 30)
+    private String telefonoContactoCliente;
+
+    @Temporal(TemporalType.TIMESTAMP)
     @Column(name = "fecha_limite_pago")
     private Date fechaLimitePago;
 
@@ -100,6 +103,7 @@ public class Reserva {
         this.importeAnticipo = calcularAnticipo();
         this.estado = estado;
         this.cliente = cliente;
+        this.telefonoContactoCliente = cliente != null ? cliente.getTelefono() : null;
         this.casaRural = casaRural;
         if (habitaciones != null) {
             this.habitaciones.addAll(habitaciones);
@@ -145,6 +149,10 @@ public class Reserva {
         return importeAnticipo;
     }
 
+    public String getTelefonoContactoCliente() {
+        return telefonoContactoCliente;
+    }
+
     public Date getFechaLimitePago() {
         return fechaLimitePago;
     }
@@ -159,6 +167,9 @@ public class Reserva {
 
     public void setCliente(Cliente cliente) {
         this.cliente = cliente;
+        if (cliente != null) {
+            this.telefonoContactoCliente = cliente.getTelefono();
+        }
     }
 
     public CasaRural getCasaRural() {
@@ -225,6 +236,12 @@ public class Reserva {
 
     @PrePersist
     public void prepararPersistencia() {
+        if (casaRural == null) {
+            throw new IllegalStateException("La reserva debe estar asociada a una casa rural");
+        }
+        if (telefonoContactoCliente == null || telefonoContactoCliente.isBlank()) {
+            throw new IllegalStateException("La reserva debe tener un telefono de contacto del cliente");
+        }
         if (fechaReserva == null) {
             fechaReserva = new Date();
         }

@@ -55,6 +55,12 @@ public class CasaRural {
     @Column(name = "estado_activa")
     private boolean activa;
 
+    @Column(name = "creado_por_propietario")
+    private Integer creadoPorPropietario;
+
+    @Column(name = "modificado_por_propietario")
+    private Integer modificadoPorPropietario;
+
     @ManyToOne
     @JoinColumn(name = "id_propietario", nullable = false)
     private Propietario propietario;
@@ -74,7 +80,7 @@ public class CasaRural {
     @OneToMany(mappedBy = "casaRural", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PaqueteAlquiler> paquetesAlquiler = new ArrayList<>();
 
-    @OneToMany(mappedBy = "casaRural", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "casaRural", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     private List<Reserva> reservas = new ArrayList<>();
 
     protected CasaRural() {
@@ -173,6 +179,25 @@ public class CasaRural {
 
     public void setPropietario(Propietario propietario) {
         this.propietario = propietario;
+    }
+
+    public Integer getCreadoPorPropietario() {
+        return creadoPorPropietario;
+    }
+
+    public Integer getModificadoPorPropietario() {
+        return modificadoPorPropietario;
+    }
+
+    public void registrarCreacionPor(Propietario propietario) {
+        if (propietario != null) {
+            creadoPorPropietario = propietario.getIdUsuario();
+            modificadoPorPropietario = propietario.getIdUsuario();
+        }
+    }
+
+    public void registrarModificacionPor(int idPropietario) {
+        modificadoPorPropietario = idPropietario;
     }
 
     public List<Foto> getFotos() {

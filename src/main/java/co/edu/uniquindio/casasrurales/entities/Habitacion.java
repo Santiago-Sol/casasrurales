@@ -12,6 +12,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 
@@ -125,5 +127,13 @@ public class Habitacion {
     public String mostrarDatos() {
         return "Habitacion{codigo='%s', camas=%d, tipoCama=%s, tieneBano=%s}"
                 .formatted(codigoHabitacion, numeroCamas, tipoCama, tieneBano);
+    }
+
+    @PrePersist
+    @PreUpdate
+    public void validarIntegridad() {
+        if (casaRural == null) {
+            throw new IllegalStateException("La habitacion debe estar asociada a una casa rural");
+        }
     }
 }

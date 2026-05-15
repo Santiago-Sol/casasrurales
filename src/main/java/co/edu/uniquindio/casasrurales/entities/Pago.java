@@ -10,6 +10,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import jakarta.persistence.Temporal;
 import jakarta.persistence.TemporalType;
@@ -29,7 +30,7 @@ public class Pago {
     @Column(name = "id_pago")
     private int idPago;
 
-    @Temporal(TemporalType.DATE)
+    @Temporal(TemporalType.TIMESTAMP)
     @Column(name = "fecha_pago", nullable = false)
     private Date fechaPago;
 
@@ -83,5 +84,15 @@ public class Pago {
 
     public void registrar() {
         estado = validarPago() ? EstadoPago.VERIFICADO : EstadoPago.RECHAZADO;
+    }
+
+    @PrePersist
+    public void validarIntegridad() {
+        if (reserva == null) {
+            throw new IllegalStateException("El pago debe estar asociado a una reserva");
+        }
+        if (fechaPago == null) {
+            fechaPago = new Date();
+        }
     }
 }

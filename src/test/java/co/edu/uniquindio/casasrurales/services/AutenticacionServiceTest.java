@@ -17,9 +17,12 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import java.util.Optional;
 
 import co.edu.uniquindio.casasrurales.dto.RegistroPropietarioForm;
+import co.edu.uniquindio.casasrurales.entities.Cliente;
 import co.edu.uniquindio.casasrurales.entities.Cuenta;
+import co.edu.uniquindio.casasrurales.entities.Propietario;
 import co.edu.uniquindio.casasrurales.enums.Rol;
 import co.edu.uniquindio.casasrurales.repositories.CuentaRepository;
 import co.edu.uniquindio.casasrurales.repositories.PropietarioRepository;
@@ -221,5 +224,113 @@ class AutenticacionServiceTest {
         );
 
         verify(cuentaRepository, never()).save(any(Cuenta.class));
+    }
+
+    @DisplayName("RN131: Registro rechaza propietario sin nombre de cuenta")
+    @Test
+    void registrarPropietarioRechazaNombreCuentaVacio() {
+        formularioValido.setNombreCuenta(" ");
+        when(cuentaRepository.existsByEmail(anyString())).thenReturn(false);
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> autenticacionService.registrarPropietario(formularioValido));
+
+        assertEquals("El nombre de cuenta es obligatorio", exception.getMessage());
+        verify(propietarioRepository, never()).existsByNombreCuenta(anyString());
+        verify(cuentaRepository, never()).save(any(Cuenta.class));
+    }
+
+    @DisplayName("RN131: Registro rechaza propietario con contraseña en blanco")
+    @Test
+    void registrarPropietarioRechazaContrasenaBlanco() {
+        formularioValido.setPassword("        ");
+        when(cuentaRepository.existsByEmail(anyString())).thenReturn(false);
+        when(propietarioRepository.existsByNombreCuenta(anyString())).thenReturn(false);
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> autenticacionService.registrarPropietario(formularioValido));
+
+        assertEquals("La contraseña debe tener al menos 8 caracteres", exception.getMessage());
+        verify(cuentaRepository, never()).save(any(Cuenta.class));
+    }
+
+    @DisplayName("RN140: Registro rechaza propietario sin cuenta bancaria")
+    @Test
+    void registrarPropietarioRechazaCuentaBancariaVacia() {
+        formularioValido.setNumeroCuentaBancaria(" ");
+        when(cuentaRepository.existsByEmail(anyString())).thenReturn(false);
+        when(propietarioRepository.existsByNombreCuenta(anyString())).thenReturn(false);
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> autenticacionService.registrarPropietario(formularioValido));
+
+        assertEquals("La cuenta bancaria del propietario es obligatoria", exception.getMessage());
+        verify(cuentaRepository, never()).save(any(Cuenta.class));
+    }
+
+    @DisplayName("RN132: Autentica propietario con nombre de cuenta y contraseña correctos")
+    @Test
+    void autenticarPropietarioValidaCredenciales() {
+        Propietario propietario = new Propietario("3001234567", "juan123", "hashedPassword", "123456789");
+        propietario.setIdUsuario(8);
+        when(propietarioRepository.findByNombreCuenta("juan123")).thenReturn(Optional.of(propietario));
+        when(passwordEncoder.matches("Password123", "hashedPassword")).thenReturn(true);
+
+        int id = autenticacionService.autenticarPropietario(" juan123 ", "Password123");
+
+        assertEquals(8, id);
+        verify(propietarioRepository).findByNombreCuenta("juan123");
+    }
+
+    @DisplayName("RN132: Autenticacion de propietario rechaza contraseña incorrecta")
+    @Test
+    void autenticarPropietarioRechazaContrasenaIncorrecta() {
+        Propietario propietario = new Propietario("3001234567", "juan123", "hashedPassword", "123456789");
+        when(propietarioRepository.findByNombreCuenta("juan123")).thenReturn(Optional.of(propietario));
+        when(passwordEncoder.matches("mala", "hashedPassword")).thenReturn(false);
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> autenticacionService.autenticarPropietario("juan123", "mala"));
+
+        assertEquals("Nombre de cuenta o contraseña incorrectos", exception.getMessage());
+    }
+
+    @DisplayName("RN132: Autenticacion de propietario rechaza credenciales vacias")
+    @Test
+    void autenticarPropietarioRechazaCredencialesVacias() {
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> autenticacionService.autenticarPropietario(" ", "Password123"));
+
+        assertEquals("Nombre de cuenta o contraseña incorrectos", exception.getMessage());
+        verify(propietarioRepository, never()).findByNombreCuenta(anyString());
+    }
+
+    @DisplayName("RN134: Autenticacion de cliente rechaza cuentas de propietario")
+    @Test
+    void autenticarClienteRechazaCuentaDePropietario() {
+        Cuenta cuenta = new Cuenta("dueno@example.com", "hashedPassword", Rol.PROPIETARIO);
+        when(cuentaRepository.findByEmail("dueno@example.com")).thenReturn(Optional.of(cuenta));
+        when(passwordEncoder.matches("Password123", "hashedPassword")).thenReturn(true);
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> autenticacionService.autenticarCliente("dueno@example.com", "Password123"));
+
+        assertEquals("Esta cuenta no es de cliente", exception.getMessage());
+    }
+
+    @DisplayName("RN134: Autentica cliente solo cuando la cuenta pertenece a cliente")
+    @Test
+    void autenticarClienteValidaCuentaCliente() {
+        Cliente cliente = new Cliente("3008881234");
+        cliente.setIdUsuario(12);
+        Cuenta cuenta = new Cuenta("cliente@example.com", "hashedPassword", Rol.CLIENTE);
+        cuenta.setCliente(cliente);
+        when(cuentaRepository.findByEmail("cliente@example.com")).thenReturn(Optional.of(cuenta));
+        when(passwordEncoder.matches("Password123", "hashedPassword")).thenReturn(true);
+
+        int id = autenticacionService.autenticarCliente(" cliente@example.com ", "Password123");
+
+        assertEquals(12, id);
+        verify(cuentaRepository).findByEmail("cliente@example.com");
     }
 }

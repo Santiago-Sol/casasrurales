@@ -24,7 +24,7 @@ import java.util.List;
 })
 public class Propietario extends Usuario {
 
-    @Column(name = "nombre_cuenta", nullable = false, length = 100)
+    @Column(name = "nombre_cuenta", nullable = false, unique = true, length = 100)
     private String nombreCuenta;
 
     @Column(name = "contrasena", nullable = false, length = 100)

@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -93,6 +94,8 @@ class PropietarioServiceTest {
         assertEquals("La Montanita", casa.getNombrePropiedad());
         assertEquals("Salento", casa.getPoblacion());
         assertTrue(casa.isActiva());
+        assertEquals(8, casa.getCreadoPorPropietario());
+        assertEquals(8, casa.getModificadoPorPropietario());
         assertEquals(3, casa.getNumDormitorios());
         assertEquals("HAB-1", casa.getHabitaciones().get(0).getCodigoHabitacion());
         assertEquals(2, casa.getHabitaciones().get(1).getNumeroCamas());
@@ -164,6 +167,36 @@ class PropietarioServiceTest {
                 () -> propietarioService.crearCasa(form, 8));
 
         assertEquals("Debe registrar al menos una foto de la casa", ex.getMessage());
+        verify(propietarioRepository, never()).save(any(Propietario.class));
+    }
+
+    @Test
+    @DisplayName("RN139: crearCasa rechaza fotos con formato no permitido")
+    void crearCasaRechazaFormatoImagenInvalido() {
+        Propietario propietario = new Propietario("3001234567", "dueno", "secret123", "123456");
+        propietario.setIdUsuario(8);
+
+        CasaRuralFormDTO form = new CasaRuralFormDTO();
+        form.setCodigoCasa(15);
+        form.setNombrePropiedad("La Montanita");
+        form.setPoblacion("Salento");
+        form.setDescripcion("Cabana familiar");
+        form.setNumComedores(2);
+        form.setNumPlazasGaraje(3);
+        form.setNumHabitaciones(3);
+        form.setNumBanos(2);
+        form.setNumCocinas(1);
+        form.setUrlsFotos(List.of("/uploads/casa-15.gif"));
+        form.setHabitaciones(habitacionesValidas());
+        form.setCocinas(cocinasValidas());
+
+        when(propietarioRepository.findById(8)).thenReturn(Optional.of(propietario));
+        when(casaRuralRepository.existsById(15)).thenReturn(false);
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> propietarioService.crearCasa(form, 8));
+
+        assertEquals("Las fotos deben estar en formato JPG, PNG o WEBP", ex.getMessage());
         verify(propietarioRepository, never()).save(any(Propietario.class));
     }
 
@@ -413,7 +446,10 @@ class PropietarioServiceTest {
         assertEquals(ModalidadAlquiler.AMBAS, resultado.getModalidad());
         assertEquals(450000, resultado.getPrecioCasaEntera());
         assertEquals(120000, resultado.getPrecioHabitacion());
-        verify(paqueteAlquilerRepository).save(any(PaqueteAlquiler.class));
+        verify(paqueteAlquilerRepository).save(argThat(paquete ->
+                paquete.getCreadoPorPropietario() == 8
+                        && paquete.getModificadoPorPropietario() == 8
+                        && "Creacion del paquete".equals(paquete.getAuditoriaCambios())));
     }
 
     @Test
@@ -541,7 +577,36 @@ class PropietarioServiceTest {
         assertEquals(ModalidadAlquiler.AMBAS, resultado.getModalidad());
         assertEquals(500000, resultado.getPrecioCasaEntera());
         assertEquals(130000, resultado.getPrecioHabitacion());
+        assertEquals(8, paquete.getModificadoPorPropietario());
+        assertEquals("Modificacion de paquete de alquiler", paquete.getAuditoriaCambios());
         verify(paqueteAlquilerRepository).save(paquete);
+    }
+
+    @Test
+    @DisplayName("RN135: modificarPaquete rechaza casas de otro propietario")
+    void modificarPaqueteRechazaCasaDeOtroPropietario() {
+        Propietario propietarioCasa = new Propietario("3007654321", "dueno", "secret123", "654321");
+        propietarioCasa.setIdUsuario(3);
+        CasaRural casa = new CasaRural(15, "Salento", "La Montanita", "Cabana familiar", 1, 1, true);
+        casa.setPropietario(propietarioCasa);
+
+        PaqueteAlquilerDTO dto = new PaqueteAlquilerDTO(
+                null,
+                java.sql.Date.valueOf("2026-06-01"),
+                java.sql.Date.valueOf("2026-06-05"),
+                ModalidadAlquiler.CASA_ENTERA,
+                450000,
+                0,
+                true
+        );
+
+        when(casaRuralRepository.findById(15)).thenReturn(Optional.of(casa));
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> propietarioService.modificarPaquete(15, 8, 1, dto));
+
+        assertEquals("No tienes permiso para editar esta casa", ex.getMessage());
+        verify(paqueteAlquilerRepository, never()).save(any(PaqueteAlquiler.class));
     }
 
     @Test
@@ -868,6 +933,29 @@ class PropietarioServiceTest {
     }
 
     @Test
+    @DisplayName("RN135: registrarPagoReserva rechaza reservas de otro propietario")
+    void registrarPagoReservaRechazaReservaDeOtroPropietario() {
+        Propietario propietarioCasa = new Propietario("3007654321", "dueno", "secret123", "654321");
+        propietarioCasa.setIdUsuario(3);
+        CasaRural casa = new CasaRural(15, "Salento", "La Montanita", "Cabana familiar", 1, 1, true);
+        casa.setPropietario(propietarioCasa);
+
+        Reserva reserva = mock(Reserva.class);
+        when(reserva.getCasaRural()).thenReturn(casa);
+        when(reservaRepository.findById(99)).thenReturn(Optional.of(reserva));
+
+        PagoRegistroDTO dto = new PagoRegistroDTO();
+        dto.setMonto(120000.0);
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> propietarioService.registrarPagoReserva(99, 8, dto));
+
+        assertEquals("No tienes permiso para gestionar esta reserva", ex.getMessage());
+        verify(pagoRepository, never()).save(any(Pago.class));
+        verify(reservaRepository, never()).save(any(Reserva.class));
+    }
+
+    @Test
     @DisplayName("obtenerReservasVencidas devuelve solo reservas vencidas del propietario")
     void obtenerReservasVencidasExitosamente() {
         Propietario propietario = new Propietario("3001234567", "dueno", "secret123", "123456");
@@ -952,6 +1040,68 @@ class PropietarioServiceTest {
         reserva.confirmar();
 
         assertEquals(EstadoReserva.CONFIRMADA, reserva.getEstado());
+    }
+
+    @Test
+    @DisplayName("RN154: Pago sin reserva asociada es invalido")
+    void pagoSinReservaAsociadaEsInvalido() {
+        Pago pago = new Pago(new Date(), 200000, EstadoPago.PENDIENTE);
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class, pago::validarIntegridad);
+
+        assertEquals("El pago debe estar asociado a una reserva", ex.getMessage());
+    }
+
+    @Test
+    @DisplayName("RN152/RN153: Reserva requiere casa y telefono de contacto")
+    void reservaRequiereCasaYTelefonoContacto() {
+        Reserva reservaSinCasa = new Reserva(
+                new Date(),
+                2,
+                TipoReserva.CASA_ENTERA,
+                1000000,
+                EstadoReserva.PENDIENTE_PAGO,
+                null,
+                null,
+                List.of()
+        );
+
+        IllegalStateException sinCasa = assertThrows(IllegalStateException.class, reservaSinCasa::prepararPersistencia);
+        assertEquals("La reserva debe estar asociada a una casa rural", sinCasa.getMessage());
+
+        Reserva reservaSinTelefono = new Reserva(
+                new Date(),
+                2,
+                TipoReserva.CASA_ENTERA,
+                1000000,
+                EstadoReserva.PENDIENTE_PAGO,
+                null,
+                new CasaRural(15, "Salento", "La Montanita", "Cabana familiar", 1, 1, true),
+                List.of()
+        );
+
+        IllegalStateException sinTelefono = assertThrows(IllegalStateException.class, reservaSinTelefono::prepararPersistencia);
+        assertEquals("La reserva debe tener un telefono de contacto del cliente", sinTelefono.getMessage());
+    }
+
+    @Test
+    @DisplayName("RN150/RN151: Habitacion y paquete requieren casa asociada")
+    void habitacionYPaqueteRequierenCasaAsociada() {
+        var habitacion = new co.edu.uniquindio.casasrurales.entities.Habitacion(
+                "HAB-1", 1, TipoCama.SENCILLA, false);
+        IllegalStateException habitacionSinCasa = assertThrows(IllegalStateException.class, habitacion::validarIntegridad);
+        assertEquals("La habitacion debe estar asociada a una casa rural", habitacionSinCasa.getMessage());
+
+        PaqueteAlquiler paquete = new PaqueteAlquiler(
+                java.sql.Date.valueOf("2026-06-01"),
+                java.sql.Date.valueOf("2026-06-05"),
+                ModalidadAlquiler.CASA_ENTERA,
+                450000,
+                0,
+                true
+        );
+        IllegalStateException paqueteSinCasa = assertThrows(IllegalStateException.class, paquete::validarIntegridad);
+        assertEquals("El paquete debe estar asociado a una casa rural", paqueteSinCasa.getMessage());
     }
 
     @Test
