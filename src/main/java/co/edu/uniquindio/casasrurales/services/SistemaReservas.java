@@ -292,10 +292,11 @@ public class SistemaReservas {
                 .filter(p -> tipoReserva == TipoReserva.CASA_ENTERA ? p.permiteCasaEntera() : p.permiteHabitaciones())
                 .findFirst()
                 .orElseThrow(() -> new IllegalStateException("No existe un paquete que cubra la reserva completa"));
+        paquete.validarPreciosObligatorios();
 
         return switch (tipoReserva) {
-            case CASA_ENTERA -> paquete.getPrecioCasaEntera();
-            case POR_HABITACIONES -> paquete.getPrecioHabitacion() * habitaciones.size() * numeroNoches;
+            case CASA_ENTERA -> paquete.obtenerPrecioPara(TipoReserva.CASA_ENTERA);
+            case POR_HABITACIONES -> paquete.obtenerPrecioPara(TipoReserva.POR_HABITACIONES) * habitaciones.size() * numeroNoches;
         };
     }
 

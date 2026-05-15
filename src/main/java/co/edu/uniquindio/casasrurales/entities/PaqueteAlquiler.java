@@ -1,6 +1,7 @@
 package co.edu.uniquindio.casasrurales.entities;
 
 import co.edu.uniquindio.casasrurales.enums.ModalidadAlquiler;
+import co.edu.uniquindio.casasrurales.enums.TipoReserva;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -44,10 +45,10 @@ public class PaqueteAlquiler {
     @Column(name = "modalidad_alquiler", nullable = false, length = 30)
     private ModalidadAlquiler modalidad;
 
-    @Column(name = "precio_casa_entera")
+    @Column(name = "precio_casa_entera", nullable = false)
     private double precioCasaEntera;
 
-    @Column(name = "precio_por_habitacion")
+    @Column(name = "precio_por_habitacion", nullable = false)
     private double precioHabitacion;
 
     @Column(name = "disponible")
@@ -137,12 +138,30 @@ public class PaqueteAlquiler {
         return modalidad == ModalidadAlquiler.POR_HABITACIONES || modalidad == ModalidadAlquiler.AMBAS;
     }
 
-    public double calcularPrecio() {
-        return switch (modalidad) {
-            case CASA_ENTERA -> precioCasaEntera;
-            case POR_HABITACIONES -> precioHabitacion;
-            case AMBAS -> precioCasaEntera;
+    public double obtenerPrecioPara(TipoReserva tipoReserva) {
+        if (tipoReserva == null) {
+            throw new IllegalArgumentException("El tipo de reserva es obligatorio");
+        }
+        return switch (tipoReserva) {
+            case CASA_ENTERA -> {
+                if (!permiteCasaEntera()) {
+                    throw new IllegalStateException("El paquete no permite alquilar la casa completa");
+                }
+                yield precioCasaEntera;
+            }
+            case POR_HABITACIONES -> {
+                if (!permiteHabitaciones()) {
+                    throw new IllegalStateException("El paquete no permite alquilar por habitaciones");
+                }
+                yield precioHabitacion;
+            }
         };
+    }
+
+    public double calcularPrecio() {
+        return obtenerPrecioPara(modalidad == ModalidadAlquiler.POR_HABITACIONES
+                ? TipoReserva.POR_HABITACIONES
+                : TipoReserva.CASA_ENTERA);
     }
 
     public void modificar(Date fechaInicio, Date fechaFin, ModalidadAlquiler modalidad, double precioCasaEntera,
@@ -157,6 +176,7 @@ public class PaqueteAlquiler {
 
     @PrePersist
     public void registrarFechasCreacion() {
+        validarPreciosObligatorios();
         Date ahora = new Date();
         fechaCreacion = ahora;
         fechaModificacion = ahora;
@@ -164,7 +184,23 @@ public class PaqueteAlquiler {
 
     @PreUpdate
     public void actualizarFechaModificacion() {
+        validarPreciosObligatorios();
         fechaModificacion = new Date();
+    }
+
+    public void validarPreciosObligatorios() {
+        if (modalidad == null) {
+            throw new IllegalArgumentException("La modalidad del paquete es obligatoria");
+        }
+        if (precioCasaEntera < 0 || precioHabitacion < 0) {
+            throw new IllegalArgumentException("Los precios del paquete no pueden ser negativos");
+        }
+        if (permiteCasaEntera() && precioCasaEntera <= 0) {
+            throw new IllegalArgumentException("El precio de casa entera debe ser mayor a cero");
+        }
+        if (permiteHabitaciones() && precioHabitacion <= 0) {
+            throw new IllegalArgumentException("El precio por habitacion debe ser mayor a cero");
+        }
     }
 
     private Date inicioDia(Date fecha) {

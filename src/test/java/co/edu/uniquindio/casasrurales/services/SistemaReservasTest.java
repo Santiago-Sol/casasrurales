@@ -111,7 +111,64 @@ class SistemaReservasTest {
         assertEquals(100000.0, reserva.calcularAnticipo(), 0.01);
     }
 
+    // ─── TESTS DE PRECIOS ───────────────────────────────────────────────────
+
     // ─── TESTS DE VALIDACION DE CASA ────────────────────────────────────────
+
+    @Test
+    @DisplayName("RN126/RN128: El importe de casa completa sale del paquete y la modalidad")
+    void realizarReservaCalculaImporteCasaCompletaDesdePaquete() {
+        Reserva reserva = sistemaReservas.realizarReservaCalculandoImporte(
+                1, clienteValido, fechaFutura(5), 3, List.of()
+        );
+
+        assertEquals(500000.0, reserva.getImporteTotal(), 0.01);
+        assertEquals(100000.0, reserva.getImporteAnticipo(), 0.01);
+    }
+
+    @Test
+    @DisplayName("RN127/RN128: El importe por habitaciones usa su precio independiente")
+    void realizarReservaCalculaImporteHabitacionesConPrecioIndependiente() {
+        Habitacion habitacionUno = mock(Habitacion.class);
+        Habitacion habitacionDos = mock(Habitacion.class);
+        when(habitacionUno.getIdHabitacion()).thenReturn(1);
+        when(habitacionUno.getCodigoHabitacion()).thenReturn("HAB-1");
+        when(habitacionDos.getIdHabitacion()).thenReturn(2);
+        when(habitacionDos.getCodigoHabitacion()).thenReturn("HAB-2");
+        when(casaValida.getHabitaciones()).thenReturn(List.of(habitacionUno, habitacionDos));
+
+        Reserva reserva = sistemaReservas.realizarReservaCalculandoImporte(
+                1, clienteValido, fechaFutura(5), 3, List.of(habitacionUno, habitacionDos)
+        );
+
+        assertEquals(720000.0, reserva.getImporteTotal(), 0.01);
+        assertEquals(144000.0, reserva.getImporteAnticipo(), 0.01);
+    }
+
+    @Test
+    @DisplayName("RN125: Rechaza paquete sin precio definido para la modalidad")
+    void realizarReservaRechazaPaqueteSinPrecioDeModalidad() {
+        Habitacion habitacion = mock(Habitacion.class);
+        when(habitacion.getIdHabitacion()).thenReturn(1);
+        when(habitacion.getCodigoHabitacion()).thenReturn("HAB-1");
+        when(casaValida.getHabitaciones()).thenReturn(List.of(habitacion));
+        when(casaValida.getPaquetesAlquiler()).thenReturn(List.of(new PaqueteAlquiler(
+                fechaFutura(1),
+                fechaFutura(30),
+                ModalidadAlquiler.POR_HABITACIONES,
+                500000,
+                0,
+                true
+        )));
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
+                sistemaReservas.realizarReservaCalculandoImporte(
+                        1, clienteValido, fechaFutura(5), 2, List.of(habitacion))
+        );
+
+        assertEquals("El precio por habitacion debe ser mayor a cero", ex.getMessage());
+        verify(reservaRepository, never()).save(any(Reserva.class));
+    }
 
     @Test
     @DisplayName("HU9-C03: Casa inexistente lanza NullPointerException")

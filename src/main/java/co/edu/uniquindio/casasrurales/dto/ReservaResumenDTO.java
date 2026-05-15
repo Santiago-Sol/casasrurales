@@ -20,6 +20,7 @@ public class ReservaResumenDTO {
     private TipoReserva tipoReserva;
     private double importeTotal;
     private double importeAnticipo;
+    private double importeAConsignar;
     private Date fechaLimitePago;
     private EstadoReserva estado;
     private String poblacionCasa;
@@ -51,6 +52,7 @@ public class ReservaResumenDTO {
         this.tipoReserva = tipoReserva;
         this.importeTotal = importeTotal;
         this.importeAnticipo = importeAnticipo;
+        this.importeAConsignar = importeAnticipo;
         this.fechaLimitePago = fechaLimitePago;
         this.estado = estado;
         this.poblacionCasa = poblacionCasa;
@@ -68,6 +70,7 @@ public class ReservaResumenDTO {
     public TipoReserva getTipoReserva() { return tipoReserva; }
     public double getImporteTotal() { return importeTotal; }
     public double getImporteAnticipo() { return importeAnticipo; }
+    public double getImporteAConsignar() { return importeAConsignar; }
     public Date getFechaLimitePago() { return fechaLimitePago; }
     public EstadoReserva getEstado() { return estado; }
     public String getPoblacionCasa() { return poblacionCasa; }

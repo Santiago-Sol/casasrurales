@@ -110,6 +110,7 @@ class ReservaControllerTest {
         assertEquals(42, body.getNumeroReserva());
         assertEquals(EstadoReserva.PENDIENTE_PAGO, body.getEstado());
         assertEquals("42", body.getConceptoPago());
+        assertEquals(60000.0, body.getImporteAConsignar(), 0.01);
         assertNotNull(body.getAdvertenciaPago());
     }
 

@@ -143,7 +143,6 @@ export default function ReservaCasa({ casa, onClose }) {
       codigoCasa: casa.codigoCasa,
       fechaEntrada: formulario.fechaEntrada,
       numeroNoches: Number(formulario.numeroNoches),
-      importeTotal: calcularPrecio(),
       telefonoContacto: formulario.telefonoContacto,
       idsHabitaciones: formulario.tipo === 'POR_HABITACIONES' ? habitacionesSeleccionadas : []
     };
@@ -209,6 +208,7 @@ export default function ReservaCasa({ casa, onClose }) {
             <p><strong>Fecha Salida:</strong> {formatFecha(resumen.fechaSalida)}</p>
             <p><strong>Noches:</strong> {resumen.numeroNoches}</p>
             <p><strong>Importe Total:</strong> ${resumen.importeTotal.toLocaleString()}</p>
+            <p><strong>Importe a Consignar:</strong> ${(resumen.importeAConsignar ?? resumen.importeAnticipo).toLocaleString()}</p>
             <p><strong>Anticipo Requerido (20%):</strong> ${resumen.importeAnticipo.toLocaleString()}</p>
             <p><strong>Cuenta del propietario:</strong> {resumen.cuentaCorrientePropietario || 'No disponible'}</p>
             <p><strong>Fecha Limite Pago:</strong> {formatFecha(resumen.fechaLimitePago)}</p>
