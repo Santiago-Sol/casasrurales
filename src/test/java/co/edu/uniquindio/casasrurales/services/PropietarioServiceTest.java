@@ -662,6 +662,156 @@ class PropietarioServiceTest {
     }
 
     @Test
+    @DisplayName("dividirPaquete reemplaza el paquete original por paquetes no solapados")
+    void dividirPaqueteExitosamente() {
+        Propietario propietario = new Propietario("3001234567", "dueno", "secret123", "123456");
+        propietario.setIdUsuario(8);
+        CasaRural casa = new CasaRural(15, "Salento", "La Montanita", "Cabana familiar", 1, 1, true);
+        casa.setPropietario(propietario);
+        PaqueteAlquiler paquete = new PaqueteAlquiler(
+                java.sql.Date.valueOf("2026-06-01"),
+                java.sql.Date.valueOf("2026-06-10"),
+                ModalidadAlquiler.AMBAS,
+                900000,
+                150000,
+                true
+        );
+        casa.agregarPaqueteAlquiler(paquete);
+
+        List<PaqueteAlquilerDTO> nuevosPaquetes = List.of(
+                new PaqueteAlquilerDTO(null, java.sql.Date.valueOf("2026-06-01"),
+                        java.sql.Date.valueOf("2026-06-05"), ModalidadAlquiler.CASA_ENTERA, 500000, 0, true),
+                new PaqueteAlquilerDTO(null, java.sql.Date.valueOf("2026-06-06"),
+                        java.sql.Date.valueOf("2026-06-10"), ModalidadAlquiler.POR_HABITACIONES, 0, 140000, true)
+        );
+
+        when(casaRuralRepository.findById(15)).thenReturn(Optional.of(casa));
+        when(paqueteAlquilerRepository.findById(0)).thenReturn(Optional.of(paquete));
+        when(reservaRepository.findByCasaRuralCodigoCasa(15)).thenReturn(List.of());
+        when(paqueteAlquilerRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        List<PaqueteAlquilerDTO> resultado = propietarioService.dividirPaquete(15, 8, 0, nuevosPaquetes);
+
+        assertEquals(2, resultado.size());
+        assertEquals(java.sql.Date.valueOf("2026-06-01"), resultado.get(0).getFechaInicio());
+        assertEquals(java.sql.Date.valueOf("2026-06-10"), resultado.get(1).getFechaFin());
+        verify(paqueteAlquilerRepository).delete(paquete);
+        verify(paqueteAlquilerRepository).saveAll(any());
+    }
+
+    @Test
+    @DisplayName("dividirPaquete rechaza paquetes resultantes solapados")
+    void dividirPaqueteRechazaSubpaquetesSolapados() {
+        Propietario propietario = new Propietario("3001234567", "dueno", "secret123", "123456");
+        propietario.setIdUsuario(8);
+        CasaRural casa = new CasaRural(15, "Salento", "La Montanita", "Cabana familiar", 1, 1, true);
+        casa.setPropietario(propietario);
+        PaqueteAlquiler paquete = new PaqueteAlquiler(
+                java.sql.Date.valueOf("2026-06-01"),
+                java.sql.Date.valueOf("2026-06-10"),
+                ModalidadAlquiler.AMBAS,
+                900000,
+                150000,
+                true
+        );
+        casa.agregarPaqueteAlquiler(paquete);
+
+        List<PaqueteAlquilerDTO> nuevosPaquetes = List.of(
+                new PaqueteAlquilerDTO(null, java.sql.Date.valueOf("2026-06-01"),
+                        java.sql.Date.valueOf("2026-06-06"), ModalidadAlquiler.CASA_ENTERA, 500000, 0, true),
+                new PaqueteAlquilerDTO(null, java.sql.Date.valueOf("2026-06-06"),
+                        java.sql.Date.valueOf("2026-06-10"), ModalidadAlquiler.POR_HABITACIONES, 0, 140000, true)
+        );
+
+        when(casaRuralRepository.findById(15)).thenReturn(Optional.of(casa));
+        when(paqueteAlquilerRepository.findById(0)).thenReturn(Optional.of(paquete));
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> propietarioService.dividirPaquete(15, 8, 0, nuevosPaquetes));
+
+        assertEquals("Los paquetes resultantes no pueden solaparse entre si", ex.getMessage());
+        verify(paqueteAlquilerRepository, never()).delete(any(PaqueteAlquiler.class));
+        verify(paqueteAlquilerRepository, never()).saveAll(any());
+    }
+
+    @Test
+    @DisplayName("dividirPaquete rechaza paquetes fuera del rango original")
+    void dividirPaqueteRechazaRangoFueraDelOriginal() {
+        Propietario propietario = new Propietario("3001234567", "dueno", "secret123", "123456");
+        propietario.setIdUsuario(8);
+        CasaRural casa = new CasaRural(15, "Salento", "La Montanita", "Cabana familiar", 1, 1, true);
+        casa.setPropietario(propietario);
+        PaqueteAlquiler paquete = new PaqueteAlquiler(
+                java.sql.Date.valueOf("2026-06-01"),
+                java.sql.Date.valueOf("2026-06-10"),
+                ModalidadAlquiler.AMBAS,
+                900000,
+                150000,
+                true
+        );
+        casa.agregarPaqueteAlquiler(paquete);
+
+        List<PaqueteAlquilerDTO> nuevosPaquetes = List.of(
+                new PaqueteAlquilerDTO(null, java.sql.Date.valueOf("2026-05-31"),
+                        java.sql.Date.valueOf("2026-06-05"), ModalidadAlquiler.CASA_ENTERA, 500000, 0, true),
+                new PaqueteAlquilerDTO(null, java.sql.Date.valueOf("2026-06-06"),
+                        java.sql.Date.valueOf("2026-06-10"), ModalidadAlquiler.POR_HABITACIONES, 0, 140000, true)
+        );
+
+        when(casaRuralRepository.findById(15)).thenReturn(Optional.of(casa));
+        when(paqueteAlquilerRepository.findById(0)).thenReturn(Optional.of(paquete));
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> propietarioService.dividirPaquete(15, 8, 0, nuevosPaquetes));
+
+        assertEquals("Los paquetes resultantes deben estar dentro del rango del paquete original", ex.getMessage());
+        verify(paqueteAlquilerRepository, never()).delete(any(PaqueteAlquiler.class));
+        verify(paqueteAlquilerRepository, never()).saveAll(any());
+    }
+
+    @Test
+    @DisplayName("dividirPaquete rechaza division que contradice reservas existentes")
+    void dividirPaqueteRechazaReservaSinCobertura() {
+        Propietario propietario = new Propietario("3001234567", "dueno", "secret123", "123456");
+        propietario.setIdUsuario(8);
+        CasaRural casa = new CasaRural(15, "Salento", "La Montanita", "Cabana familiar", 1, 1, true);
+        casa.setPropietario(propietario);
+        PaqueteAlquiler paquete = new PaqueteAlquiler(
+                java.sql.Date.valueOf("2026-06-01"),
+                java.sql.Date.valueOf("2026-06-10"),
+                ModalidadAlquiler.AMBAS,
+                900000,
+                150000,
+                true
+        );
+        casa.agregarPaqueteAlquiler(paquete);
+
+        Reserva reserva = mock(Reserva.class);
+        when(reserva.getEstado()).thenReturn(EstadoReserva.CONFIRMADA);
+        when(reserva.getFechaEntrada()).thenReturn(java.sql.Date.valueOf("2026-06-04"));
+        when(reserva.getNumeroNoches()).thenReturn(4);
+        when(reserva.getTipoReserva()).thenReturn(TipoReserva.CASA_ENTERA);
+
+        List<PaqueteAlquilerDTO> nuevosPaquetes = List.of(
+                new PaqueteAlquilerDTO(null, java.sql.Date.valueOf("2026-06-01"),
+                        java.sql.Date.valueOf("2026-06-05"), ModalidadAlquiler.CASA_ENTERA, 500000, 0, true),
+                new PaqueteAlquilerDTO(null, java.sql.Date.valueOf("2026-06-06"),
+                        java.sql.Date.valueOf("2026-06-10"), ModalidadAlquiler.CASA_ENTERA, 500000, 0, true)
+        );
+
+        when(casaRuralRepository.findById(15)).thenReturn(Optional.of(casa));
+        when(paqueteAlquilerRepository.findById(0)).thenReturn(Optional.of(paquete));
+        when(reservaRepository.findByCasaRuralCodigoCasa(15)).thenReturn(List.of(reserva));
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> propietarioService.dividirPaquete(15, 8, 0, nuevosPaquetes));
+
+        assertEquals("No se puede dividir el paquete porque contradice reservas existentes", ex.getMessage());
+        verify(paqueteAlquilerRepository, never()).delete(any(PaqueteAlquiler.class));
+        verify(paqueteAlquilerRepository, never()).saveAll(any());
+    }
+
+    @Test
     @DisplayName("registrarPagoReserva registra pago y confirma reserva del propietario")
     void registrarPagoReservaExitosamente() {
         Propietario propietario = new Propietario("3001234567", "dueno", "secret123", "123456");

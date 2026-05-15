@@ -308,10 +308,12 @@ public class SistemaReservas {
     }
 
     private boolean reservaCubreFecha(Reserva reserva, Date fecha) {
+        Date fechaNormalizada = inicioDia(fecha);
+        Date fechaEntradaReserva = inicioDia(reserva.getFechaEntrada());
         Calendar fin = Calendar.getInstance();
-        fin.setTime(reserva.getFechaEntrada());
+        fin.setTime(fechaEntradaReserva);
         fin.add(Calendar.DAY_OF_MONTH, reserva.getNumeroNoches() - 1);
-        return !fecha.before(reserva.getFechaEntrada()) && !fecha.after(fin.getTime());
+        return !fechaNormalizada.before(fechaEntradaReserva) && !fechaNormalizada.after(fin.getTime());
     }
 
     private Date sumarDias(Date fecha, int dias) {
@@ -322,6 +324,16 @@ public class SistemaReservas {
         calendar.set(Calendar.SECOND, 0);
         calendar.set(Calendar.MILLISECOND, 0);
         calendar.add(Calendar.DAY_OF_MONTH, dias);
+        return calendar.getTime();
+    }
+
+    private Date inicioDia(Date fecha) {
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(fecha);
+        calendar.set(Calendar.HOUR_OF_DAY, 0);
+        calendar.set(Calendar.MINUTE, 0);
+        calendar.set(Calendar.SECOND, 0);
+        calendar.set(Calendar.MILLISECOND, 0);
         return calendar.getTime();
     }
 

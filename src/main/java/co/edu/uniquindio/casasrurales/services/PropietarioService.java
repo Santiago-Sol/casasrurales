@@ -553,6 +553,45 @@ public class PropietarioService {
     }
 
     /**
+     * RN43: Divide un paquete existente en paquetes mas pequenos sin generar doble disponibilidad.
+     */
+    @Transactional
+    public List<PaqueteAlquilerDTO> dividirPaquete(int codigoCasa, int idPropietario, int idPaquete,
+                                                   List<PaqueteAlquilerDTO> nuevosPaquetesDto) {
+        CasaRural casa = obtenerCasaDelPropietario(codigoCasa, idPropietario);
+
+        Optional<PaqueteAlquiler> paqueteOpt = paqueteAlquilerRepository.findById(idPaquete);
+        if (paqueteOpt.isEmpty() || paqueteOpt.get().getCasaRural().getCodigoCasa() != codigoCasa) {
+            throw new IllegalArgumentException("Paquete no encontrado para esta casa");
+        }
+
+        PaqueteAlquiler paqueteOriginal = paqueteOpt.get();
+        validarDivisionPaquete(casa, paqueteOriginal, nuevosPaquetesDto);
+
+        List<PaqueteAlquiler> nuevosPaquetes = nuevosPaquetesDto.stream()
+                .map(dto -> {
+                    PaqueteAlquiler paquete = new PaqueteAlquiler(
+                            dto.getFechaInicio(),
+                            dto.getFechaFin(),
+                            dto.getModalidad(),
+                            dto.getPrecioCasaEntera(),
+                            dto.getPrecioHabitacion(),
+                            dto.isDisponible()
+                    );
+                    paquete.setCasaRural(casa);
+                    return paquete;
+                })
+                .collect(Collectors.toList());
+
+        paqueteAlquilerRepository.delete(paqueteOriginal);
+        List<PaqueteAlquiler> guardados = paqueteAlquilerRepository.saveAll(nuevosPaquetes);
+
+        return guardados.stream()
+                .map(this::convertirAPaqueteDTO)
+                .collect(Collectors.toList());
+    }
+
+    /**
      * Obtener paquetes de una casa
      */
     public List<PaqueteAlquilerDTO> obtenerPaquetesCasa(int codigoCasa, int idPropietario) {
@@ -569,6 +608,18 @@ public class PropietarioService {
                         paquete.isDisponible()
                 ))
                 .collect(Collectors.toList());
+    }
+
+    private PaqueteAlquilerDTO convertirAPaqueteDTO(PaqueteAlquiler paquete) {
+        return new PaqueteAlquilerDTO(
+                paquete.getIdPaquete(),
+                paquete.getFechaInicio(),
+                paquete.getFechaFin(),
+                paquete.getModalidad(),
+                paquete.getPrecioCasaEntera(),
+                paquete.getPrecioHabitacion(),
+                paquete.isDisponible()
+        );
     }
 
     private void validarDatosPaquete(PaqueteAlquilerDTO dto) {
@@ -593,6 +644,67 @@ public class PropietarioService {
         if (dto.getModalidad() == ModalidadAlquiler.POR_HABITACIONES || dto.getModalidad() == ModalidadAlquiler.AMBAS) {
             if (dto.getPrecioHabitacion() <= 0) {
                 throw new IllegalArgumentException("El precio por habitacion debe ser mayor a cero");
+            }
+        }
+    }
+
+    private void validarDivisionPaquete(CasaRural casa, PaqueteAlquiler paqueteOriginal,
+                                        List<PaqueteAlquilerDTO> nuevosPaquetes) {
+        if (nuevosPaquetes == null || nuevosPaquetes.size() < 2) {
+            throw new IllegalArgumentException("La division debe contener al menos dos paquetes");
+        }
+
+        for (PaqueteAlquilerDTO nuevoPaquete : nuevosPaquetes) {
+            validarDatosPaquete(nuevoPaquete);
+            if (nuevoPaquete.getFechaInicio().before(paqueteOriginal.getFechaInicio())
+                    || nuevoPaquete.getFechaFin().after(paqueteOriginal.getFechaFin())) {
+                throw new IllegalArgumentException("Los paquetes resultantes deben estar dentro del rango del paquete original");
+            }
+        }
+
+        validarPaquetesResultantesNoSeSolapan(nuevosPaquetes);
+        validarDivisionNoSolapaOtrosPaquetes(casa, paqueteOriginal, nuevosPaquetes);
+        validarDivisionNoContradiceReservas(casa, paqueteOriginal, nuevosPaquetes);
+    }
+
+    private void validarPaquetesResultantesNoSeSolapan(List<PaqueteAlquilerDTO> nuevosPaquetes) {
+        for (int i = 0; i < nuevosPaquetes.size(); i++) {
+            for (int j = i + 1; j < nuevosPaquetes.size(); j++) {
+                if (fechasSeCruzan(
+                        nuevosPaquetes.get(i).getFechaInicio(),
+                        nuevosPaquetes.get(i).getFechaFin(),
+                        nuevosPaquetes.get(j).getFechaInicio(),
+                        nuevosPaquetes.get(j).getFechaFin())) {
+                    throw new IllegalArgumentException("Los paquetes resultantes no pueden solaparse entre si");
+                }
+            }
+        }
+    }
+
+    private void validarDivisionNoSolapaOtrosPaquetes(CasaRural casa, PaqueteAlquiler paqueteOriginal,
+                                                       List<PaqueteAlquilerDTO> nuevosPaquetes) {
+        boolean solapaOtroPaquete = casa.getPaquetesAlquiler().stream()
+                .filter(paquete -> paquete != paqueteOriginal)
+                .anyMatch(paquete -> nuevosPaquetes.stream().anyMatch(nuevo ->
+                        fechasSeCruzan(nuevo.getFechaInicio(), nuevo.getFechaFin(),
+                                paquete.getFechaInicio(), paquete.getFechaFin())));
+
+        if (solapaOtroPaquete) {
+            throw new IllegalArgumentException("Los paquetes resultantes se solapan con otro paquete existente de esta casa");
+        }
+    }
+
+    private void validarDivisionNoContradiceReservas(CasaRural casa, PaqueteAlquiler paqueteOriginal,
+                                                     List<PaqueteAlquilerDTO> nuevosPaquetes) {
+        List<Reserva> reservasAfectadas = reservasVigentesCubiertasPorPaquete(casa, paqueteOriginal);
+        for (Reserva reserva : reservasAfectadas) {
+            boolean reservaSoportada = nuevosPaquetes.stream()
+                    .anyMatch(paquete -> paquete.isDisponible()
+                            && paqueteCubreReserva(paquete.getFechaInicio(), paquete.getFechaFin(), reserva)
+                            && modalidadSoportaReserva(paquete.getModalidad(), reserva));
+
+            if (!reservaSoportada) {
+                throw new IllegalStateException("No se puede dividir el paquete porque contradice reservas existentes");
             }
         }
     }

@@ -16,6 +16,7 @@ import jakarta.persistence.Table;
 import jakarta.persistence.Temporal;
 import jakarta.persistence.TemporalType;
 
+import java.util.Calendar;
 import java.util.Date;
 
 /**
@@ -122,7 +123,10 @@ public class PaqueteAlquiler {
     }
 
     public boolean incluyeFecha(Date fecha) {
-        return disponible && !fecha.before(fechaInicio) && !fecha.after(fechaFin);
+        Date fechaNormalizada = inicioDia(fecha);
+        return disponible
+                && !fechaNormalizada.before(inicioDia(fechaInicio))
+                && !fechaNormalizada.after(inicioDia(fechaFin));
     }
 
     public boolean permiteCasaEntera() {
@@ -161,5 +165,15 @@ public class PaqueteAlquiler {
     @PreUpdate
     public void actualizarFechaModificacion() {
         fechaModificacion = new Date();
+    }
+
+    private Date inicioDia(Date fecha) {
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(fecha);
+        calendar.set(Calendar.HOUR_OF_DAY, 0);
+        calendar.set(Calendar.MINUTE, 0);
+        calendar.set(Calendar.SECOND, 0);
+        calendar.set(Calendar.MILLISECOND, 0);
+        return calendar.getTime();
     }
 }

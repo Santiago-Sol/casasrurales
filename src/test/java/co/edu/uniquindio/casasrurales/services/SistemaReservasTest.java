@@ -2,8 +2,10 @@ package co.edu.uniquindio.casasrurales.services;
 
 import co.edu.uniquindio.casasrurales.entities.CasaRural;
 import co.edu.uniquindio.casasrurales.entities.Cliente;
+import co.edu.uniquindio.casasrurales.entities.Habitacion;
 import co.edu.uniquindio.casasrurales.entities.PaqueteAlquiler;
 import co.edu.uniquindio.casasrurales.entities.Reserva;
+import co.edu.uniquindio.casasrurales.enums.EstadoDisponibilidad;
 import co.edu.uniquindio.casasrurales.enums.EstadoReserva;
 import co.edu.uniquindio.casasrurales.enums.ModalidadAlquiler;
 import co.edu.uniquindio.casasrurales.enums.TipoReserva;
@@ -231,6 +233,71 @@ class SistemaReservasTest {
     }
 
     // ─── TESTS DE CONSULTAS ───────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("RN57: Reserva de casa completa bloquea todas las habitaciones del dia")
+    void consultarDisponibilidadCasaEnteraBloqueaHabitaciones() {
+        Habitacion habitacionUno = mock(Habitacion.class);
+        Habitacion habitacionDos = mock(Habitacion.class);
+        when(habitacionUno.getIdHabitacion()).thenReturn(1);
+        when(habitacionUno.getCodigoHabitacion()).thenReturn("HAB-1");
+        when(habitacionDos.getIdHabitacion()).thenReturn(2);
+        when(habitacionDos.getCodigoHabitacion()).thenReturn("HAB-2");
+        when(casaValida.getHabitaciones()).thenReturn(List.of(habitacionUno, habitacionDos));
+
+        Reserva reservaCasaEntera = mock(Reserva.class);
+        when(reservaCasaEntera.getEstado()).thenReturn(EstadoReserva.CONFIRMADA);
+        when(reservaCasaEntera.getFechaEntrada()).thenReturn(fechaFutura(5));
+        when(reservaCasaEntera.getNumeroNoches()).thenReturn(1);
+        when(reservaCasaEntera.getTipoReserva()).thenReturn(TipoReserva.CASA_ENTERA);
+        when(reservaRepository.findByCasaRuralCodigoCasa(1)).thenReturn(List.of(reservaCasaEntera));
+
+        var disponibilidad = sistemaReservas.consultarDisponibilidadDetallada(1, fechaFutura(5), 1);
+
+        assertTrue(disponibilidad.getDias().get(0).getHabitaciones().stream()
+                .allMatch(habitacion -> habitacion.getEstado() == EstadoDisponibilidad.RESERVADA));
+    }
+
+    @Test
+    @DisplayName("RN58: Habitacion reservada bloquea la reserva de casa completa")
+    void realizarReservaCasaEnteraFallaSiHabitacionEstaReservada() {
+        Habitacion habitacionUno = mock(Habitacion.class);
+        when(habitacionUno.getIdHabitacion()).thenReturn(1);
+        when(habitacionUno.getCodigoHabitacion()).thenReturn("HAB-1");
+
+        Reserva reservaHabitacion = mock(Reserva.class);
+        when(reservaHabitacion.getEstado()).thenReturn(EstadoReserva.CONFIRMADA);
+        when(reservaHabitacion.getFechaEntrada()).thenReturn(fechaFutura(5));
+        when(reservaHabitacion.getNumeroNoches()).thenReturn(1);
+        when(reservaHabitacion.getTipoReserva()).thenReturn(TipoReserva.POR_HABITACIONES);
+        when(reservaHabitacion.getHabitaciones()).thenReturn(List.of(habitacionUno));
+        when(reservaRepository.findByCasaRuralCodigoCasa(1)).thenReturn(List.of(reservaHabitacion));
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () ->
+                sistemaReservas.realizarReserva(1, clienteValido, fechaFutura(5), 1, List.of(), 200000)
+        );
+
+        assertEquals("La casa no esta disponible", ex.getMessage());
+    }
+
+    @Test
+    @DisplayName("RN59-RN60: Reserva falla si algun dia del periodo no esta disponible")
+    void realizarReservaFallaSiPeriodoTieneDiasNoDisponibles() {
+        when(casaValida.getPaquetesAlquiler()).thenReturn(List.of(new PaqueteAlquiler(
+                fechaFutura(5),
+                fechaFutura(5),
+                ModalidadAlquiler.CASA_ENTERA,
+                200000,
+                0,
+                true
+        )));
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () ->
+                sistemaReservas.realizarReserva(1, clienteValido, fechaFutura(5), 2, List.of(), 200000)
+        );
+
+        assertEquals("La casa no esta disponible", ex.getMessage());
+    }
 
     @Test
     @DisplayName("HU9-C12: buscarReservaPorNumero retorna null si no existe")

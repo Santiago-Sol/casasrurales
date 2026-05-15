@@ -310,6 +310,29 @@ public class PropietarioController {
         }
     }
 
+    /**
+     * RN43: Divide un paquete de alquiler en varios paquetes mas pequenos.
+     */
+    @PostMapping("/mis-casas/{codigoCasa}/paquetes/{idPaquete}/dividir")
+    public ResponseEntity<?> dividirPaquete(
+            @PathVariable int codigoCasa,
+            @PathVariable int idPaquete,
+            @Valid @RequestBody List<co.edu.uniquindio.casasrurales.dto.PaqueteAlquilerDTO> nuevosPaquetes,
+            Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Debe estar autenticado"));
+        }
+        try {
+            int idPropietario = Integer.parseInt(authentication.getName());
+            var paquetes = propietarioService.dividirPaquete(codigoCasa, idPropietario, idPaquete, nuevosPaquetes);
+            return ResponseEntity.status(HttpStatus.CREATED).body(paquetes);
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", ex.getMessage()));
+        } catch (IllegalStateException ex) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", ex.getMessage()));
+        }
+    }
+
     @GetMapping("/reservas")
     public ResponseEntity<?> obtenerReservas(Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated()) {
