@@ -2,6 +2,7 @@ package co.edu.uniquindio.casasrurales.controllers;
 
 import co.edu.uniquindio.casasrurales.dto.ReservaRequestDTO;
 import co.edu.uniquindio.casasrurales.dto.ReservaResumenDTO;
+import co.edu.uniquindio.casasrurales.dto.PagoPasarelaDTO;
 import co.edu.uniquindio.casasrurales.entities.CasaRural;
 import co.edu.uniquindio.casasrurales.entities.Cliente;
 import co.edu.uniquindio.casasrurales.entities.Habitacion;
@@ -10,6 +11,8 @@ import co.edu.uniquindio.casasrurales.enums.EstadoReserva;
 import co.edu.uniquindio.casasrurales.enums.TipoReserva;
 import co.edu.uniquindio.casasrurales.repositories.ClienteRepository;
 import co.edu.uniquindio.casasrurales.repositories.HabitacionRepository;
+import co.edu.uniquindio.casasrurales.repositories.PagoRepository;
+import co.edu.uniquindio.casasrurales.repositories.ReservaRepository;
 import co.edu.uniquindio.casasrurales.services.SistemaReservas;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -39,6 +42,8 @@ class ReservaControllerTest {
     private SistemaReservas sistemaReservas;
     private ClienteRepository clienteRepository;
     private HabitacionRepository habitacionRepository;
+    private ReservaRepository reservaRepository;
+    private PagoRepository pagoRepository;
     private Authentication authentication;
 
     private Cliente clienteMock;
@@ -49,8 +54,11 @@ class ReservaControllerTest {
         sistemaReservas = mock(SistemaReservas.class);
         clienteRepository = mock(ClienteRepository.class);
         habitacionRepository = mock(HabitacionRepository.class);
+        reservaRepository = mock(ReservaRepository.class);
+        pagoRepository = mock(PagoRepository.class);
 
-        reservaController = new ReservaController(sistemaReservas, clienteRepository, habitacionRepository);
+        reservaController = new ReservaController(
+                sistemaReservas, clienteRepository, habitacionRepository, reservaRepository, pagoRepository);
 
         authentication = mock(Authentication.class);
         when(authentication.isAuthenticated()).thenReturn(true);
@@ -284,5 +292,33 @@ class ReservaControllerTest {
         Map<?, ?> body = (Map<?, ?>) respuesta.getBody();
         assertNotNull(body);
         assertEquals("Reserva no encontrada", body.get("error"));
+    }
+
+    @Test
+    @DisplayName("RN139: Cliente puede pagar anticipo y confirmar reserva")
+    void testPagarReserva_Exitosa() {
+        PagoPasarelaDTO pago = new PagoPasarelaDTO();
+        pago.setMonto(60000.0);
+        pago.setTitular("Cliente Prueba");
+        pago.setNumeroTarjeta("4111111111111111");
+        pago.setVencimiento("12/30");
+        pago.setCvv("123");
+
+        when(reservaMock.getCliente()).thenReturn(clienteMock);
+        when(reservaMock.getEstado()).thenReturn(EstadoReserva.PENDIENTE_PAGO);
+        when(reservaMock.getImporteAnticipo()).thenReturn(60000.0);
+        when(sistemaReservas.buscarReservaPorNumero(42)).thenReturn(reservaMock);
+
+        ResponseEntity<?> respuesta = reservaController.pagarReserva(42, pago, authentication);
+
+        assertEquals(HttpStatus.OK, respuesta.getStatusCode());
+        Map<?, ?> body = (Map<?, ?>) respuesta.getBody();
+        assertNotNull(body);
+        assertTrue(String.valueOf(body.get("mensaje")).contains("Pago aprobado"));
+        assertTrue(body.containsKey("notificacionPropietario"));
+        verify(reservaMock).agregarPago(any());
+        verify(reservaMock).confirmar();
+        verify(pagoRepository).save(any());
+        verify(reservaRepository).save(reservaMock);
     }
 }

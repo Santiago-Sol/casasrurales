@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import '../styles/dashboard.css'
 import GestionPaquetes from './GestionPaquetes'
 import GestionPagos from './GestionPagos'
+import { notificarSiEsError } from '../utils/notificaciones'
 
 const crearHabitacionesIniciales = (cantidad = 3) =>
   Array.from({ length: cantidad }, (_, index) => ({
@@ -27,7 +28,6 @@ const formularioInicial = {
   numHabitaciones: 3,
   numBanos: 2,
   numCocinas: 1,
-  fotos: '',
   habitacionesDetalle: crearHabitacionesIniciales(),
   cocinasDetalle: crearCocinasIniciales()
 }
@@ -43,6 +43,8 @@ export default function DashboardPropietario() {
   const [modoFormulario, setModoFormulario] = useState('crear')
   const [casaEditando, setCasaEditando] = useState(null)
   const [formulario, setFormulario] = useState(formularioInicial)
+  const [fotosSeleccionadas, setFotosSeleccionadas] = useState([])
+  const fotosSeleccionadasRef = useRef([])
   const [guardando, setGuardando] = useState(false)
   const [casaGestionandoPaquetes, setCasaGestionandoPaquetes] = useState(null)
   const [gestionandoPagos, setGestionandoPagos] = useState(false)
@@ -51,9 +53,18 @@ export default function DashboardPropietario() {
     obtenerMisCasas()
   }, [])
 
+  useEffect(() => {
+    fotosSeleccionadasRef.current = fotosSeleccionadas
+  }, [fotosSeleccionadas])
+
+  useEffect(() => () => {
+    fotosSeleccionadasRef.current.forEach((foto) => URL.revokeObjectURL(foto.preview))
+  }, [])
+
   const mostrarMensaje = (texto, tipo = 'exito') => {
     setMensaje(texto)
     setTipoMensaje(tipo)
+    notificarSiEsError(texto, tipo)
   }
 
   const obtenerMisCasas = async () => {
@@ -95,6 +106,7 @@ export default function DashboardPropietario() {
     setModoFormulario('crear')
     setCasaEditando(null)
     setFormulario(formularioInicial)
+    limpiarFotosSeleccionadas()
     setModalFormularioAbierto(true)
   }
 
@@ -111,10 +123,10 @@ export default function DashboardPropietario() {
       numHabitaciones: casa.habitaciones ?? 3,
       numBanos: casa.banos ?? 1,
       numCocinas: casa.cocinas ?? 1,
-      fotos: '',
       habitacionesDetalle: crearHabitacionesIniciales(casa.habitaciones ?? 3),
       cocinasDetalle: crearCocinasIniciales(casa.cocinas ?? 1)
     })
+    limpiarFotosSeleccionadas()
     setModalFormularioAbierto(true)
   }
 
@@ -123,12 +135,14 @@ export default function DashboardPropietario() {
     setModalFormularioAbierto(false)
     setCasaEditando(null)
     setFormulario(formularioInicial)
+    limpiarFotosSeleccionadas()
   }
 
   const resetearFormulario = () => {
     setModalFormularioAbierto(false)
     setCasaEditando(null)
     setFormulario(formularioInicial)
+    limpiarFotosSeleccionadas()
   }
 
   const actualizarFormulario = ({ target }) => {
@@ -143,6 +157,63 @@ export default function DashboardPropietario() {
         ? { cocinasDetalle: ajustarCocinas(actual.cocinasDetalle, Number(value)) }
         : {})
     }))
+  }
+
+  const limpiarFotosSeleccionadas = () => {
+    setFotosSeleccionadas((actuales) => {
+      actuales.forEach((foto) => URL.revokeObjectURL(foto.preview))
+      return []
+    })
+  }
+
+  const seleccionarFotos = ({ target }) => {
+    const archivos = Array.from(target.files ?? [])
+    setFotosSeleccionadas((actuales) => {
+      actuales.forEach((foto) => URL.revokeObjectURL(foto.preview))
+      return archivos.map((archivo) => ({
+        archivo,
+        preview: URL.createObjectURL(archivo)
+      }))
+    })
+  }
+
+  const quitarFoto = (indiceFoto) => {
+    setFotosSeleccionadas((actuales) => {
+      const fotoEliminada = actuales[indiceFoto]
+      if (fotoEliminada) {
+        URL.revokeObjectURL(fotoEliminada.preview)
+      }
+      return actuales.filter((_, index) => index !== indiceFoto)
+    })
+  }
+
+  const subirFotosSeleccionadas = async () => {
+    const datos = new FormData()
+    fotosSeleccionadas.forEach(({ archivo }) => {
+      datos.append('fotos', archivo)
+    })
+
+    const response = await fetch('/api/propietario/fotos', {
+      method: 'POST',
+      credentials: 'same-origin',
+      body: datos
+    })
+
+    const data = await response.json().catch(() => ({}))
+
+    if (!response.ok) {
+      if (response.status === 401 || response.status === 403) {
+        throw new Error('Tu sesion no esta autorizada para subir fotos. Inicia sesion de nuevo.')
+      }
+
+      if (response.status === 404) {
+        throw new Error('El servidor no tiene disponible la ruta para subir fotos. Reinicia el backend.')
+      }
+
+      throw new Error(data.error || 'No fue posible subir las fotos. Revisa que el backend este encendido.')
+    }
+
+    return data.urls ?? []
   }
 
   const ajustarHabitaciones = (habitacionesActuales, cantidad) => {
@@ -194,42 +265,46 @@ export default function DashboardPropietario() {
     setGuardando(true)
 
     const esEdicion = modoFormulario === 'editar' && casaEditando
-    const payload = {
-      codigoCasa: esEdicion ? Number(formulario.codigoCasa) : null,
-      nombrePropiedad: formulario.nombrePropiedad.trim(),
-      poblacion: formulario.poblacion.trim(),
-      descripcion: formulario.descripcion.trim(),
-      numComedores: Number(formulario.numComedores),
-      numPlazasGaraje: Number(formulario.numPlazasGaraje),
-      numHabitaciones: Number(formulario.numHabitaciones),
-      numBanos: Number(formulario.numBanos),
-      numCocinas: Number(formulario.numCocinas),
-      urlsFotos: formulario.fotos
-        .split('\n')
-        .map((url) => url.trim())
-        .filter(Boolean),
-      habitaciones: esEdicion
-        ? []
-        : formulario.habitacionesDetalle.map((habitacion) => ({
-            codigoHabitacion: habitacion.codigoHabitacion.trim(),
-            numeroCamas: Number(habitacion.numeroCamas),
-            tipoCama: habitacion.tipoCama,
-            tieneBano: Boolean(habitacion.tieneBano)
-          })),
-      cocinas: esEdicion
-        ? []
-        : formulario.cocinasDetalle.map((cocina) => ({
-            tieneLavavajillas: Boolean(cocina.tieneLavavajillas),
-            tieneLavadora: Boolean(cocina.tieneLavadora)
-          }))
-    }
-
-    const url = esEdicion
-      ? `/api/propietario/mis-casas/${casaEditando.codigoCasa}`
-      : '/api/propietario/mis-casas'
-    const method = esEdicion ? 'PUT' : 'POST'
 
     try {
+      if (!esEdicion && fotosSeleccionadas.length === 0) {
+        mostrarMensaje('Debes seleccionar al menos una foto de la casa', 'error')
+        return
+      }
+
+      const urlsFotos = esEdicion ? [] : await subirFotosSeleccionadas()
+      const payload = {
+        codigoCasa: esEdicion ? Number(formulario.codigoCasa) : null,
+        nombrePropiedad: formulario.nombrePropiedad.trim(),
+        poblacion: formulario.poblacion.trim(),
+        descripcion: formulario.descripcion.trim(),
+        numComedores: Number(formulario.numComedores),
+        numPlazasGaraje: Number(formulario.numPlazasGaraje),
+        numHabitaciones: Number(formulario.numHabitaciones),
+        numBanos: Number(formulario.numBanos),
+        numCocinas: Number(formulario.numCocinas),
+        urlsFotos,
+        habitaciones: esEdicion
+          ? []
+          : formulario.habitacionesDetalle.map((habitacion) => ({
+              codigoHabitacion: habitacion.codigoHabitacion.trim(),
+              numeroCamas: Number(habitacion.numeroCamas),
+              tipoCama: habitacion.tipoCama,
+              tieneBano: Boolean(habitacion.tieneBano)
+            })),
+        cocinas: esEdicion
+          ? []
+          : formulario.cocinasDetalle.map((cocina) => ({
+              tieneLavavajillas: Boolean(cocina.tieneLavavajillas),
+              tieneLavadora: Boolean(cocina.tieneLavadora)
+            }))
+      }
+
+      const url = esEdicion
+        ? `/api/propietario/mis-casas/${casaEditando.codigoCasa}`
+        : '/api/propietario/mis-casas'
+      const method = esEdicion ? 'PUT' : 'POST'
+
       const response = await fetch(url, {
         method,
         headers: {
@@ -253,7 +328,7 @@ export default function DashboardPropietario() {
 
       mostrarMensaje(data.error || 'No fue posible guardar la casa', 'error')
     } catch (error) {
-      mostrarMensaje('Error de conexion al guardar la casa', 'error')
+      mostrarMensaje(error.message || 'Error de conexion al guardar la casa', 'error')
       console.error(error)
     } finally {
       setGuardando(false)
@@ -615,14 +690,31 @@ export default function DashboardPropietario() {
               {modoFormulario === 'crear' && (
                 <div className="campo-formulario">
                   <label htmlFor="fotos">Fotos</label>
-                  <textarea
+                  <input
                     id="fotos"
-                    name="fotos"
-                    rows="3"
-                    value={formulario.fotos}
-                    onChange={actualizarFormulario}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    multiple
+                    onChange={seleccionarFotos}
                     required
                   />
+                  {fotosSeleccionadas.length > 0 && (
+                    <div className="fotos-preview">
+                      {fotosSeleccionadas.map((foto, index) => (
+                        <div className="foto-preview" key={foto.preview}>
+                          <img src={foto.preview} alt={`Foto seleccionada ${index + 1}`} />
+                          <button
+                            type="button"
+                            className="quitar-foto"
+                            onClick={() => quitarFoto(index)}
+                            aria-label="Quitar foto"
+                          >
+                            x
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 

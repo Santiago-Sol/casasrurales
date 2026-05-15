@@ -10,15 +10,56 @@ import MisReservasCliente from './components/MisReservasCliente'
 function App() {
   const [seccionActiva, setSeccionActiva] = useState('busqueda')
   const [usuarioAutenticado, setUsuarioAutenticado] = useState(null)
+  const [notificacion, setNotificacion] = useState(null)
 
   useEffect(() => {
-    const usuarioGuardado = localStorage.getItem('usuarioAutenticado')
-    if (usuarioGuardado) {
-      const usuario = JSON.parse(usuarioGuardado)
-      setUsuarioAutenticado(usuario)
-      setSeccionActiva(usuario.tipoUsuario === 'propietario' ? 'dashboard-propietario' : 'busqueda')
+    const validarSesion = async () => {
+      const usuarioGuardado = localStorage.getItem('usuarioAutenticado')
+      if (!usuarioGuardado) return
+
+      try {
+        const usuario = JSON.parse(usuarioGuardado)
+        const response = await fetch('/auth/me', { credentials: 'include' })
+
+        if (!response.ok) {
+          localStorage.removeItem('usuarioAutenticado')
+          setUsuarioAutenticado(null)
+          setSeccionActiva('busqueda')
+          return
+        }
+
+        setUsuarioAutenticado(usuario)
+        setSeccionActiva(usuario.tipoUsuario === 'propietario' ? 'dashboard-propietario' : 'busqueda')
+      } catch (error) {
+        localStorage.removeItem('usuarioAutenticado')
+        setUsuarioAutenticado(null)
+        setSeccionActiva('busqueda')
+      }
     }
+
+    validarSesion()
   }, [])
+
+  useEffect(() => {
+    const mostrarNotificacion = (event) => {
+      const detalle = event.detail || {}
+      if (!detalle.mensaje) return
+
+      setNotificacion({
+        mensaje: detalle.mensaje,
+        tipo: detalle.tipo || 'error'
+      })
+    }
+
+    window.addEventListener('app-notificacion', mostrarNotificacion)
+    return () => window.removeEventListener('app-notificacion', mostrarNotificacion)
+  }, [])
+
+  useEffect(() => {
+    if (!notificacion) return undefined
+    const timeout = setTimeout(() => setNotificacion(null), 6500)
+    return () => clearTimeout(timeout)
+  }, [notificacion])
 
   const handleLoginSuccess = (datosUsuario) => {
     setUsuarioAutenticado(datosUsuario)
@@ -99,6 +140,11 @@ function App() {
     return <BusquedaCasas 
              usuarioAutenticado={usuarioAutenticado} 
              onRequireLogin={() => setSeccionActiva('login')} 
+             onAuthExpired={() => {
+               localStorage.removeItem('usuarioAutenticado')
+               setUsuarioAutenticado(null)
+               setSeccionActiva('login')
+             }}
            />
   }
 
@@ -157,6 +203,20 @@ function App() {
       )}
 
       {renderContenido()}
+
+      {notificacion && (
+        <div className="global-notification-layer" role="alert" aria-live="assertive">
+          <div className={`global-notification ${notificacion.tipo}`}>
+            <div>
+              <strong>{notificacion.tipo === 'exito' ? 'Operacion realizada' : 'Atencion'}</strong>
+              <p>{notificacion.mensaje}</p>
+            </div>
+            <button type="button" onClick={() => setNotificacion(null)} aria-label="Cerrar notificacion">
+              x
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

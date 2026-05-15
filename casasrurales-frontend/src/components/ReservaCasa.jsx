@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { formatFechaCorta, formatFecha } from '../utils/formatFecha';
+import { mostrarNotificacion } from '../utils/notificaciones';
 
-export default function ReservaCasa({ casa, onClose }) {
+export default function ReservaCasa({ casa, onClose, onAuthExpired }) {
   const [paquetes, setPaquetes] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [mensaje, setMensaje] = useState('');
@@ -22,6 +23,13 @@ export default function ReservaCasa({ casa, onClose }) {
   const [guardando, setGuardando] = useState(false);
 
   const toInputDate = (fecha) => String(fecha || '').slice(0, 10);
+  const mostrarMensaje = (texto, tipo = 'error') => {
+    setMensaje(texto);
+    setTipoMensaje(tipo);
+    if (tipo === 'error') {
+      mostrarNotificacion(texto, tipo);
+    }
+  };
 
   useEffect(() => {
     const fetchPaquetes = async () => {
@@ -91,8 +99,7 @@ export default function ReservaCasa({ casa, onClose }) {
 
   const consultarDisponibilidad = async () => {
     if (!formulario.fechaEntrada || Number(formulario.numeroNoches) < 1) {
-      setMensaje('Ingresa fecha de entrada y numero de noches para consultar disponibilidad.');
-      setTipoMensaje('info');
+      mostrarMensaje('Ingresa fecha de entrada y numero de noches para consultar disponibilidad.', 'info');
       return null;
     }
 
@@ -109,16 +116,36 @@ export default function ReservaCasa({ casa, onClose }) {
         setDisponibilidad(data);
         return data;
       }
-      setMensaje(data.error || 'No fue posible consultar disponibilidad.');
-      setTipoMensaje('error');
+      mostrarMensaje(data.error || 'No fue posible consultar disponibilidad.', 'error');
       return null;
     } catch (error) {
-      setMensaje('Error de conexion con el servidor');
-      setTipoMensaje('error');
+      mostrarMensaje('Error de conexion con el servidor', 'error');
       return null;
     } finally {
       setConsultando(false);
     }
+  };
+
+  const validarDisponibilidadSeleccionada = (disponibilidadActual) => {
+    const dias = disponibilidadActual?.dias || [];
+    if (dias.length === 0) {
+      return 'Consulta la disponibilidad antes de confirmar la reserva.';
+    }
+
+    if (formulario.tipo === 'CASA_ENTERA') {
+      const disponible = dias.every((dia) => dia.estadoCasaEntera === 'LIBRE');
+      return disponible ? '' : 'La casa no esta disponible para las fechas seleccionadas.';
+    }
+
+    const habitacionesDisponibles = dias.every((dia) =>
+      habitacionesSeleccionadas.every((idHabitacion) =>
+        (dia.habitaciones || []).some((habitacion) =>
+          habitacion.idHabitacion === idHabitacion && habitacion.estado === 'LIBRE'
+        )
+      )
+    );
+
+    return habitacionesDisponibles ? '' : 'Una o mas habitaciones no estan disponibles para las fechas seleccionadas.';
   };
 
   const confirmarReserva = async (e) => {
@@ -127,14 +154,20 @@ export default function ReservaCasa({ casa, onClose }) {
     setMensaje('');
 
     if (formulario.tipo === 'POR_HABITACIONES' && habitacionesSeleccionadas.length === 0) {
-      setMensaje('Selecciona al menos una habitacion para reservar por habitaciones.');
-      setTipoMensaje('error');
+      mostrarMensaje('Selecciona al menos una habitacion para reservar por habitaciones.', 'error');
       setGuardando(false);
       return;
     }
 
     const disponibilidadActual = disponibilidad || await consultarDisponibilidad();
     if (!disponibilidadActual) {
+      setGuardando(false);
+      return;
+    }
+
+    const errorDisponibilidad = validarDisponibilidadSeleccionada(disponibilidadActual);
+    if (errorDisponibilidad) {
+      mostrarMensaje(errorDisponibilidad, 'error');
       setGuardando(false);
       return;
     }
@@ -151,25 +184,34 @@ export default function ReservaCasa({ casa, onClose }) {
       const response = await fetch('/api/reservas', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'same-origin',
+        credentials: 'include',
         body: JSON.stringify(payload)
       });
-      const data = await response.json().catch(() => ({}));
+      const data = await response.clone().json().catch(async () => {
+        const texto = await response.text().catch(() => '');
+        return texto ? { error: texto } : {};
+      });
 
       if (response.ok) {
         setResumen(data);
-        setMensaje('Reserva realizada exitosamente. Revisa los datos para el pago.');
-        setTipoMensaje('exito');
+        mostrarMensaje('Reserva realizada exitosamente. Revisa los datos para el pago.', 'exito');
       } else {
+        if (response.status === 401 || response.status === 403) {
+          mostrarMensaje('Tu sesion expiro o no estas autenticado como cliente. Inicia sesion nuevamente para confirmar la reserva.', 'error');
+          onAuthExpired?.();
+          return;
+        }
+
         if (data.disponibilidad) {
           setDisponibilidad(data.disponibilidad);
         }
-        setMensaje(data.error || 'No fue posible realizar la reserva.');
-        setTipoMensaje('error');
+        const detalleCampos = data.campos
+          ? Object.values(data.campos).filter(Boolean).join(' ')
+          : '';
+        mostrarMensaje(detalleCampos || data.error || 'No fue posible realizar la reserva.', 'error');
       }
     } catch (error) {
-      setMensaje('Error de conexion con el servidor');
-      setTipoMensaje('error');
+      mostrarMensaje('Error de conexion con el servidor', 'error');
     } finally {
       setGuardando(false);
     }
@@ -178,20 +220,22 @@ export default function ReservaCasa({ casa, onClose }) {
   const renderDisponibilidad = () => {
     if (!disponibilidad) return null;
     return (
-      <div className="info-reserva" style={{ margin: '16px 0', padding: '12px', background: '#f5f5f5', borderRadius: '8px' }}>
+      <div className="info-reserva disponibilidad-reserva">
         <strong>Disponibilidad</strong>
-        {disponibilidad.dias.map((dia) => (
-          <div key={dia.fecha} style={{ marginTop: '10px' }}>
-            <p style={{ margin: '0 0 4px' }}>
+        <div className="disponibilidad-lista">
+          {disponibilidad.dias.map((dia) => (
+            <div key={dia.fecha} className="disponibilidad-dia">
+              <p>
               {formatFecha(dia.fecha)} - Casa entera: <strong>{dia.estadoCasaEntera}</strong>
-            </p>
-            {dia.habitaciones.length > 0 && (
-              <p style={{ margin: 0, fontSize: '0.9em' }}>
-                Habitaciones: {dia.habitaciones.map((h) => `${h.codigoHabitacion}: ${h.estado}`).join(' | ')}
               </p>
-            )}
-          </div>
-        ))}
+              {dia.habitaciones.length > 0 && (
+                <p className="disponibilidad-habitaciones">
+                  Habitaciones: {dia.habitaciones.map((h) => `${h.codigoHabitacion}: ${h.estado}`).join(' | ')}
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
     );
   };
@@ -199,10 +243,11 @@ export default function ReservaCasa({ casa, onClose }) {
   if (resumen) {
     return (
       <div className="modal-overlay">
-        <div className="modal-contenido" style={{ maxWidth: '560px' }}>
+        <div className="modal-contenido reserva-modal reserva-modal-confirmada">
           <h3>Reserva Confirmada</h3>
-          <div className="mensaje exito">{mensaje}</div>
-          <div className="info-reserva" style={{ margin: '20px 0', padding: '15px', background: '#f5f5f5', borderRadius: '8px' }}>
+          <div className="reserva-modal-scroll">
+            <div className="mensaje exito">{mensaje}</div>
+            <div className="info-reserva reserva-confirmacion">
             <p><strong>Numero de Reserva:</strong> {resumen.numeroReserva}</p>
             <p><strong>Fecha Entrada:</strong> {formatFecha(resumen.fechaEntrada)}</p>
             <p><strong>Fecha Salida:</strong> {formatFecha(resumen.fechaSalida)}</p>
@@ -213,6 +258,7 @@ export default function ReservaCasa({ casa, onClose }) {
             <p><strong>Cuenta del propietario:</strong> {resumen.cuentaCorrientePropietario || 'No disponible'}</p>
             <p><strong>Fecha Limite Pago:</strong> {formatFecha(resumen.fechaLimitePago)}</p>
             <p><strong>Estado:</strong> <span className="badge badge-yellow">{resumen.estado}</span></p>
+            </div>
           </div>
           <div className="modal-botones">
             <button className="btn-primary-action" onClick={onClose}>Aceptar y Cerrar</button>
@@ -224,12 +270,19 @@ export default function ReservaCasa({ casa, onClose }) {
 
   return (
     <div className="modal-overlay">
-      <div className="modal-contenido" style={{ maxWidth: '620px' }}>
-        <h3>Reservar {casa.nombrePropiedad}</h3>
-        {mensaje && <div className={`mensaje ${tipoMensaje}`}>{mensaje}</div>}
+      <div className="modal-contenido reserva-modal">
+        <div className="reserva-modal-header">
+          <div>
+            <span>Reserva</span>
+            <h3>{casa.nombrePropiedad}</h3>
+          </div>
+          <button type="button" className="reserva-cerrar" onClick={onClose} aria-label="Cerrar reserva">x</button>
+        </div>
 
-        <form className="formulario-casa" onSubmit={confirmarReserva}>
-          {!cargando && paquetes.length > 0 && (
+        <form className="formulario-casa reserva-formulario" onSubmit={confirmarReserva}>
+          <div className="reserva-modal-scroll">
+            {mensaje && <div className={`mensaje ${tipoMensaje}`}>{mensaje}</div>}
+            {!cargando && paquetes.length > 0 && (
             <div className="campo-formulario">
               <label>Seleccionar Paquete</label>
               <select value={paqueteSeleccionado} onChange={(e) => seleccionarPaquete(e.target.value)}>
@@ -241,63 +294,71 @@ export default function ReservaCasa({ casa, onClose }) {
                 ))}
               </select>
             </div>
-          )}
+            )}
 
-          <div className="campo-formulario">
-            <label>Telefono de contacto</label>
-            <input type="tel" name="telefonoContacto" value={formulario.telefonoContacto} onChange={handleChange} required />
-          </div>
-          <div className="campo-formulario">
-            <label>Fecha de Entrada</label>
-            <input type="date" name="fechaEntrada" value={formulario.fechaEntrada} onChange={handleChange} required />
-          </div>
-          <div className="campo-formulario">
-            <label>Numero de Noches</label>
-            <input type="number" min="1" name="numeroNoches" value={formulario.numeroNoches} onChange={handleChange} required />
-          </div>
-          <div className="campo-formulario">
-            <label>Modalidad Deseada</label>
-            <select name="tipo" value={formulario.tipo} onChange={handleChange}>
-              <option value="CASA_ENTERA">Casa Entera</option>
-              <option value="POR_HABITACIONES">Por Habitaciones</option>
-            </select>
-          </div>
-
-          {formulario.tipo === 'POR_HABITACIONES' && habitaciones.length > 0 && (
-            <div className="campo-formulario">
-              <label>Habitaciones</label>
-              {habitaciones.map((habitacion) => (
-                <label key={habitacion.idHabitacion || habitacion.codigoHabitacion} style={{ display: 'block', marginTop: '6px' }}>
-                  <input
-                    type="checkbox"
-                    checked={habitacionesSeleccionadas.includes(habitacion.idHabitacion)}
-                    onChange={() => toggleHabitacion(habitacion.idHabitacion)}
-                  />
-                  {' '}{habitacion.codigoHabitacion} - {habitacion.numeroCamas} cama(s) {habitacion.tipoCama}
-                </label>
-              ))}
+            <div className="reserva-grid">
+              <div className="campo-formulario">
+                <label>Telefono de contacto</label>
+                <input type="tel" name="telefonoContacto" value={formulario.telefonoContacto} onChange={handleChange} required />
+              </div>
+              <div className="campo-formulario">
+                <label>Fecha de Entrada</label>
+                <input type="date" name="fechaEntrada" value={formulario.fechaEntrada} onChange={handleChange} required />
+              </div>
+              <div className="campo-formulario">
+                <label>Numero de Noches</label>
+                <input type="number" min="1" name="numeroNoches" value={formulario.numeroNoches} onChange={handleChange} required />
+              </div>
+              <div className="campo-formulario">
+                <label>Modalidad Deseada</label>
+                <select name="tipo" value={formulario.tipo} onChange={handleChange}>
+                  <option value="CASA_ENTERA">Casa Entera</option>
+                  <option value="POR_HABITACIONES">Por Habitaciones</option>
+                </select>
+              </div>
             </div>
-          )}
 
-          <button type="button" className="btn-primary" onClick={consultarDisponibilidad} disabled={consultando}>
-            {consultando ? 'Consultando...' : 'Consultar Disponibilidad'}
-          </button>
+            {formulario.tipo === 'POR_HABITACIONES' && habitaciones.length > 0 && (
+              <div className="campo-formulario habitaciones-reserva">
+                <label>Habitaciones</label>
+                <div className="habitaciones-reserva-lista">
+                  {habitaciones.map((habitacion) => (
+                    <label key={habitacion.idHabitacion || habitacion.codigoHabitacion} className="habitacion-reserva-opcion">
+                      <span>
+                        <strong>{habitacion.codigoHabitacion}</strong>
+                        {habitacion.numeroCamas} cama(s) {habitacion.tipoCama}
+                      </span>
+                      <input
+                        type="checkbox"
+                        checked={habitacionesSeleccionadas.includes(habitacion.idHabitacion)}
+                        onChange={() => toggleHabitacion(habitacion.idHabitacion)}
+                      />
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
 
-          {renderDisponibilidad()}
+            <button type="button" className="btn-primary reserva-consultar" onClick={consultarDisponibilidad} disabled={consultando}>
+              {consultando ? 'Consultando...' : 'Consultar Disponibilidad'}
+            </button>
 
-          <div style={{ margin: '20px 0', fontSize: '1.2em', fontWeight: 'bold', textAlign: 'right' }}>
-            Importe Estimado: ${calcularPrecio().toLocaleString()}
+            {renderDisponibilidad()}
+
+            <p className="advertencia reserva-advertencia">
+              Se requerira un pago de anticipo del 20% dentro de los 3 dias siguientes a la confirmacion para asegurar la reserva.
+            </p>
           </div>
 
-          <div className="modal-botones">
+          <div className="reserva-footer">
+            <strong>Importe Estimado: ${calcularPrecio().toLocaleString()}</strong>
+            <div className="modal-botones">
             <button type="button" className="btn-cancelar" onClick={onClose}>Cancelar</button>
             <button type="submit" className="btn-primary-action" disabled={guardando}>
               {guardando ? 'Procesando...' : 'Confirmar Reserva'}
             </button>
+            </div>
           </div>
-          <p className="advertencia" style={{ marginTop: '10px', fontSize: '0.85em' }}>
-            Se requerira un pago de anticipo del 20% dentro de los 3 dias siguientes a la confirmacion para asegurar la reserva.
-          </p>
         </form>
       </div>
     </div>

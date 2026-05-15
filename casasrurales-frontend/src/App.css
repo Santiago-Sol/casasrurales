@@ -144,7 +144,77 @@ button {
   color: #17351f;
 }
 
+.global-notification-layer {
+  pointer-events: none;
+  position: fixed;
+  right: 24px;
+  top: 24px;
+  z-index: 20000;
+}
+
+.global-notification {
+  align-items: flex-start;
+  background: #fff;
+  border: 1px solid #f0b8b8;
+  border-left: 6px solid #d32f2f;
+  border-radius: 8px;
+  box-shadow: 0 20px 50px rgba(14, 18, 12, 0.32);
+  color: #431313;
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+  max-width: min(420px, calc(100vw - 32px));
+  min-width: min(360px, calc(100vw - 32px));
+  padding: 16px 18px;
+  pointer-events: auto;
+}
+
+.global-notification.warning,
+.global-notification.advertencia {
+  border-color: #f1d17a;
+  border-left-color: #e0a800;
+  color: #4d3900;
+}
+
+.global-notification.exito {
+  border-color: #9dd4ac;
+  border-left-color: #1f7a3d;
+  color: #123b20;
+}
+
+.global-notification strong {
+  display: block;
+  font-size: 15px;
+  margin-bottom: 4px;
+}
+
+.global-notification p {
+  line-height: 1.4;
+  margin: 0;
+}
+
+.global-notification button {
+  background: transparent;
+  border: 0;
+  color: inherit;
+  font-weight: 900;
+  line-height: 1;
+  min-height: 28px;
+  min-width: 28px;
+}
+
 @media (max-width: 760px) {
+  .global-notification-layer {
+    left: 14px;
+    right: 14px;
+    top: 14px;
+  }
+
+  .global-notification {
+    min-width: 0;
+    width: 100%;
+  }
+
   .navbar-container {
     align-items: flex-start;
     flex-direction: column;

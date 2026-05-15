@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { mostrarNotificacion } from '../utils/notificaciones'
 
 const formularioInicial = {
   fechaInicio: '',
@@ -18,6 +19,11 @@ export default function GestionPaquetes({ casa, onClose }) {
   const [formulario, setFormulario] = useState(formularioInicial)
   const [guardando, setGuardando] = useState(false)
 
+  const mostrarError = (texto) => {
+    setMensaje(texto)
+    mostrarNotificacion(texto, 'error')
+  }
+
   useEffect(() => {
     cargarPaquetes()
   }, [casa])
@@ -33,10 +39,10 @@ export default function GestionPaquetes({ casa, onClose }) {
         const data = await response.json()
         setPaquetes(data)
       } else {
-        setMensaje('Error al cargar paquetes')
+        mostrarError('Error al cargar paquetes')
       }
     } catch (error) {
-      setMensaje('Error de conexion')
+      mostrarError('Error de conexion')
     } finally {
       setCargando(false)
     }
@@ -98,10 +104,10 @@ export default function GestionPaquetes({ casa, onClose }) {
         setModo('lista')
         cargarPaquetes()
       } else {
-        setMensaje(data.error || 'Error al guardar el paquete')
+        mostrarError(data.error || 'Error al guardar el paquete')
       }
     } catch (error) {
-      setMensaje('Error de conexion')
+      mostrarError('Error de conexion')
     } finally {
       setGuardando(false)
     }
@@ -120,10 +126,10 @@ export default function GestionPaquetes({ casa, onClose }) {
         cargarPaquetes()
       } else {
         const data = await response.json().catch(() => ({}))
-        setMensaje(data.error || 'Error al eliminar')
+        mostrarError(data.error || 'Error al eliminar')
       }
     } catch (error) {
-      setMensaje('Error de conexion')
+      mostrarError('Error de conexion')
     }
   }
 

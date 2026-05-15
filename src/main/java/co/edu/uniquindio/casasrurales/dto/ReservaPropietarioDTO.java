@@ -22,6 +22,8 @@ public class ReservaPropietarioDTO {
     private Date fechaLimitePago;
     private double importeTotal;
     private double importeAnticipo;
+    private double importePagado;
+    private double saldoPendiente;
     private EstadoReserva estado;
     private TipoReserva tipoReserva;
     private boolean vencida;
@@ -33,6 +35,15 @@ public class ReservaPropietarioDTO {
                                  Date fechaReserva, Date fechaEntrada, int numeroNoches, Date fechaLimitePago,
                                  double importeTotal, double importeAnticipo, EstadoReserva estado,
                                  TipoReserva tipoReserva, boolean vencida) {
+        this(numeroReserva, codigoCasa, nombreCasa, poblacion, fechaReserva, fechaEntrada, numeroNoches,
+                fechaLimitePago, importeTotal, importeAnticipo, 0, importeTotal, estado, tipoReserva, vencida);
+    }
+
+    public ReservaPropietarioDTO(int numeroReserva, int codigoCasa, String nombreCasa, String poblacion,
+                                 Date fechaReserva, Date fechaEntrada, int numeroNoches, Date fechaLimitePago,
+                                 double importeTotal, double importeAnticipo, double importePagado,
+                                 double saldoPendiente, EstadoReserva estado, TipoReserva tipoReserva,
+                                 boolean vencida) {
         this.numeroReserva = numeroReserva;
         this.codigoCasa = codigoCasa;
         this.nombreCasa = nombreCasa;
@@ -44,6 +55,8 @@ public class ReservaPropietarioDTO {
         this.fechaLimitePago = fechaLimitePago;
         this.importeTotal = importeTotal;
         this.importeAnticipo = importeAnticipo;
+        this.importePagado = importePagado;
+        this.saldoPendiente = saldoPendiente;
         this.estado = estado;
         this.tipoReserva = tipoReserva;
         this.vencida = vencida;
@@ -60,6 +73,8 @@ public class ReservaPropietarioDTO {
     public Date getFechaLimitePago() { return fechaLimitePago; }
     public double getImporteTotal() { return importeTotal; }
     public double getImporteAnticipo() { return importeAnticipo; }
+    public double getImportePagado() { return importePagado; }
+    public double getSaldoPendiente() { return saldoPendiente; }
     public EstadoReserva getEstado() { return estado; }
     public TipoReserva getTipoReserva() { return tipoReserva; }
     public boolean isVencida() { return vencida; }

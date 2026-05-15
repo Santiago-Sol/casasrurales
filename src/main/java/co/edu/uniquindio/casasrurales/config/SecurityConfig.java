@@ -34,6 +34,7 @@ public class SecurityConfig {
                         .requestMatchers("/auth/registro/**").permitAll()
                         .requestMatchers("/auth/login/**").permitAll()
                         .requestMatchers("/auth/me").authenticated()
+                        .requestMatchers("/uploads/**").permitAll()
                         // Búsqueda: clientes y propietarios autenticados
                         .requestMatchers("/api/busqueda/**").permitAll()
                         // Operaciones privadas por rol

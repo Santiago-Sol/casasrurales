@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import '../styles/busqueda.css'
 import ReservaCasa from './ReservaCasa'
+import { notificarSiEsError } from '../utils/notificaciones'
 
 const imagenesCasas = [
   'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=900&q=80',
@@ -9,7 +10,7 @@ const imagenesCasas = [
   'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=900&q=80'
 ]
 
-export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin }) {
+export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin, onAuthExpired }) {
   const [tipoBusqueda, setTipoBusqueda] = useState('poblacion')
   const [termino, setTermino] = useState('Armenia')
   const [resultados, setResultados] = useState([])
@@ -32,6 +33,7 @@ export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin }) {
   const mostrarMensaje = (texto, tipo = 'info') => {
     setMensaje(texto)
     setTipoMensaje(tipo)
+    notificarSiEsError(texto, tipo)
   }
 
   const limpiarVista = () => {
@@ -293,6 +295,7 @@ export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin }) {
         <ReservaCasa 
           casa={casaReservando} 
           onClose={() => setCasaReservando(null)} 
+          onAuthExpired={onAuthExpired}
         />
       )}
     </main>

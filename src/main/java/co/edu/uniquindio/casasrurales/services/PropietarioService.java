@@ -883,6 +883,7 @@ public class PropietarioService {
 
     private ReservaPropietarioDTO convertirAReservaPropietarioDTO(Reserva reserva) {
         CasaRural casa = reserva.getCasaRural();
+        double importePagado = calcularImportePagado(reserva);
         return new ReservaPropietarioDTO(
                 reserva.getNumeroReserva(),
                 casa != null ? casa.getCodigoCasa() : 0,
@@ -894,10 +895,19 @@ public class PropietarioService {
                 reserva.getFechaLimitePago(),
                 reserva.getImporteTotal(),
                 reserva.getImporteAnticipo(),
+                importePagado,
+                Math.max(0, reserva.getImporteTotal() - importePagado),
                 reserva.getEstado(),
                 reserva.getTipoReserva(),
                 reserva.estaVencida()
         );
+    }
+
+    private double calcularImportePagado(Reserva reserva) {
+        return reserva.getPagos().stream()
+                .filter(pago -> pago.getEstado() == EstadoPago.VERIFICADO)
+                .map(Pago::getMonto)
+                .reduce(0.0, Double::sum);
     }
 }
 

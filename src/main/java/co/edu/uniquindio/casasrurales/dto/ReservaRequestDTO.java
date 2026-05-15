@@ -1,6 +1,5 @@
 package co.edu.uniquindio.casasrurales.dto;
 
-import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -19,7 +18,6 @@ public class ReservaRequestDTO {
     private Integer codigoCasa;
 
     @NotNull(message = "La fecha de entrada es obligatoria")
-    @Future(message = "La fecha de entrada debe ser futura")
     private Date fechaEntrada;
 
     @Min(value = 1, message = "El numero de noches debe ser al menos 1")

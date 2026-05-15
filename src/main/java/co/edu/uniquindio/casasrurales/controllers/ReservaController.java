@@ -3,6 +3,7 @@ package co.edu.uniquindio.casasrurales.controllers;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Calendar;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,12 +17,18 @@ import org.springframework.web.bind.annotation.RestController;
 
 import co.edu.uniquindio.casasrurales.dto.ReservaRequestDTO;
 import co.edu.uniquindio.casasrurales.dto.ReservaResumenDTO;
+import co.edu.uniquindio.casasrurales.dto.PagoPasarelaDTO;
 import co.edu.uniquindio.casasrurales.entities.Cliente;
 import co.edu.uniquindio.casasrurales.entities.Habitacion;
+import co.edu.uniquindio.casasrurales.entities.Pago;
 import co.edu.uniquindio.casasrurales.entities.Propietario;
 import co.edu.uniquindio.casasrurales.entities.Reserva;
+import co.edu.uniquindio.casasrurales.enums.EstadoPago;
+import co.edu.uniquindio.casasrurales.enums.EstadoReserva;
 import co.edu.uniquindio.casasrurales.repositories.ClienteRepository;
 import co.edu.uniquindio.casasrurales.repositories.HabitacionRepository;
+import co.edu.uniquindio.casasrurales.repositories.PagoRepository;
+import co.edu.uniquindio.casasrurales.repositories.ReservaRepository;
 import co.edu.uniquindio.casasrurales.services.SistemaReservas;
 import jakarta.validation.Valid;
 
@@ -37,13 +44,19 @@ public class ReservaController {
     private final SistemaReservas sistemaReservas;
     private final ClienteRepository clienteRepository;
     private final HabitacionRepository habitacionRepository;
+    private final ReservaRepository reservaRepository;
+    private final PagoRepository pagoRepository;
 
     public ReservaController(SistemaReservas sistemaReservas,
                              ClienteRepository clienteRepository,
-                             HabitacionRepository habitacionRepository) {
+                             HabitacionRepository habitacionRepository,
+                             ReservaRepository reservaRepository,
+                             PagoRepository pagoRepository) {
         this.sistemaReservas = sistemaReservas;
         this.clienteRepository = clienteRepository;
         this.habitacionRepository = habitacionRepository;
+        this.reservaRepository = reservaRepository;
+        this.pagoRepository = pagoRepository;
     }
 
     /**
@@ -192,8 +205,65 @@ public class ReservaController {
         return ResponseEntity.ok(crearResumen(reserva));
     }
 
+    @PostMapping("/{numeroReserva}/pagar")
+    public ResponseEntity<?> pagarReserva(@PathVariable int numeroReserva,
+                                          @Valid @RequestBody PagoPasarelaDTO pagoDTO,
+                                          Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "Debes iniciar sesion para pagar una reserva"));
+        }
+
+        Optional<Cliente> clienteOpt = clienteRepository.findById(Integer.parseInt(authentication.getName()));
+        if (clienteOpt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "Solo los clientes pueden pagar reservas"));
+        }
+
+        Reserva reserva = sistemaReservas.buscarReservaPorNumero(numeroReserva);
+        if (reserva == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "Reserva no encontrada"));
+        }
+        if (reserva.getCliente() == null || reserva.getCliente().getIdUsuario() != clienteOpt.get().getIdUsuario()) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "No tienes permiso para pagar esta reserva"));
+        }
+        double saldoPendiente = calcularSaldoPendiente(reserva);
+        if (reserva.getEstado() != EstadoReserva.PENDIENTE_PAGO
+                && !(reserva.getEstado() == EstadoReserva.CONFIRMADA && saldoPendiente > 0)) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(Map.of("error", "La reserva no tiene pagos pendientes"));
+        }
+        double montoRequerido = reserva.getEstado() == EstadoReserva.PENDIENTE_PAGO
+                ? calcularImporteAConsignar(reserva)
+                : saldoPendiente;
+        if (pagoDTO.getMonto() == null || pagoDTO.getMonto() < montoRequerido) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", "El pago debe cubrir el valor requerido para esta fecha de entrada"));
+        }
+
+        Pago pago = new Pago(new java.util.Date(), pagoDTO.getMonto(), EstadoPago.PENDIENTE);
+        pago.registrar();
+        reserva.agregarPago(pago);
+        reserva.confirmar();
+
+        pagoRepository.save(pago);
+        reservaRepository.save(reserva);
+
+        double saldoDespuesPago = calcularSaldoPendiente(reserva);
+        String mensajePago = saldoDespuesPago <= 0
+                ? "Pago aprobado. La reserva quedo pagada en su totalidad y el propietario fue notificado."
+                : "Pago aprobado. La reserva fue confirmada y el saldo restante debe pagarse antes de la fecha de salida.";
+
+        return ResponseEntity.ok(Map.of(
+                "mensaje", mensajePago,
+                "reserva", crearResumen(reserva),
+                "notificacionPropietario", "El cliente pago el anticipo de la reserva " + reserva.getNumeroReserva()
+        ));
+    }
+
     private ReservaResumenDTO crearResumen(Reserva reserva) {
-        return new ReservaResumenDTO(
+        ReservaResumenDTO resumen = new ReservaResumenDTO(
                 reserva.getNumeroReserva(),
                 reserva.getFechaReserva(),
                 reserva.getFechaEntrada(),
@@ -207,6 +277,41 @@ public class ReservaController {
                 reserva.getCasaRural().getCodigoCasa(),
                 obtenerCuentaPropietario(reserva)
         );
+        resumen.setImportePagado(calcularImportePagado(reserva));
+        return resumen;
+    }
+
+    private double calcularImporteAConsignar(Reserva reserva) {
+        Calendar limiteAnticipo = Calendar.getInstance();
+        normalizarInicioDia(limiteAnticipo);
+        limiteAnticipo.add(Calendar.DAY_OF_MONTH, 3);
+
+        Calendar entrada = Calendar.getInstance();
+        entrada.setTime(reserva.getFechaEntrada());
+        normalizarInicioDia(entrada);
+
+        return entrada.after(limiteAnticipo) ? reserva.getImporteAnticipo() : reserva.getImporteTotal();
+    }
+
+    private void normalizarInicioDia(Calendar calendar) {
+        calendar.set(Calendar.HOUR_OF_DAY, 0);
+        calendar.set(Calendar.MINUTE, 0);
+        calendar.set(Calendar.SECOND, 0);
+        calendar.set(Calendar.MILLISECOND, 0);
+    }
+
+    private double calcularImportePagado(Reserva reserva) {
+        if (reserva.getPagos() == null) {
+            return 0;
+        }
+        return reserva.getPagos().stream()
+                .filter(pago -> pago.getEstado() == EstadoPago.VERIFICADO)
+                .map(Pago::getMonto)
+                .reduce(0.0, Double::sum);
+    }
+
+    private double calcularSaldoPendiente(Reserva reserva) {
+        return Math.max(0, reserva.getImporteTotal() - calcularImportePagado(reserva));
     }
 
     private String obtenerCuentaPropietario(Reserva reserva) {

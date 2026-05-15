@@ -21,6 +21,8 @@ public class ReservaResumenDTO {
     private double importeTotal;
     private double importeAnticipo;
     private double importeAConsignar;
+    private double importePagado;
+    private double saldoPendiente;
     private Date fechaLimitePago;
     private EstadoReserva estado;
     private String poblacionCasa;
@@ -52,14 +54,17 @@ public class ReservaResumenDTO {
         this.tipoReserva = tipoReserva;
         this.importeTotal = importeTotal;
         this.importeAnticipo = importeAnticipo;
-        this.importeAConsignar = importeAnticipo;
+        this.importeAConsignar = calcularImporteAConsignar(fechaEntrada, importeTotal, importeAnticipo);
+        this.saldoPendiente = importeTotal;
         this.fechaLimitePago = fechaLimitePago;
         this.estado = estado;
         this.poblacionCasa = poblacionCasa;
         this.codigoCasa = codigoCasa;
         this.cuentaCorrientePropietario = cuentaCorrientePropietario;
         this.conceptoPago = String.valueOf(numeroReserva);
-        this.advertenciaPago = "Debe consignar el anticipo dentro de los 3 dias siguientes o la reserva podra quedar vencida para decision del propietario.";
+        this.advertenciaPago = this.importeAConsignar >= importeTotal
+                ? "Debe pagar el valor total porque la fecha de entrada es dentro de los proximos 3 dias."
+                : "Debe consignar el anticipo dentro de los 3 dias siguientes. El saldo restante debe pagarse antes de la fecha de salida.";
     }
 
     public int getNumeroReserva() { return numeroReserva; }
@@ -71,6 +76,8 @@ public class ReservaResumenDTO {
     public double getImporteTotal() { return importeTotal; }
     public double getImporteAnticipo() { return importeAnticipo; }
     public double getImporteAConsignar() { return importeAConsignar; }
+    public double getImportePagado() { return importePagado; }
+    public double getSaldoPendiente() { return saldoPendiente; }
     public Date getFechaLimitePago() { return fechaLimitePago; }
     public EstadoReserva getEstado() { return estado; }
     public String getPoblacionCasa() { return poblacionCasa; }
@@ -79,17 +86,42 @@ public class ReservaResumenDTO {
     public String getConceptoPago() { return conceptoPago; }
     public String getAdvertenciaPago() { return advertenciaPago; }
 
+    public void setImportePagado(double importePagado) {
+        this.importePagado = importePagado;
+        this.saldoPendiente = Math.max(0, importeTotal - importePagado);
+    }
+
+    private double calcularImporteAConsignar(Date fechaEntrada, double importeTotal, double importeAnticipo) {
+        if (fechaEntrada == null) {
+            return importeAnticipo;
+        }
+
+        Calendar limiteAnticipo = Calendar.getInstance();
+        normalizarInicioDia(limiteAnticipo);
+        limiteAnticipo.add(Calendar.DAY_OF_MONTH, 3);
+
+        Calendar entrada = Calendar.getInstance();
+        entrada.setTime(fechaEntrada);
+        normalizarInicioDia(entrada);
+
+        return entrada.after(limiteAnticipo) ? importeAnticipo : importeTotal;
+    }
+
     private Date calcularFechaSalida(Date fechaEntrada, int numeroNoches) {
         if (fechaEntrada == null || numeroNoches < 1) {
             return null;
         }
         Calendar calendar = Calendar.getInstance();
         calendar.setTime(fechaEntrada);
+        normalizarInicioDia(calendar);
+        calendar.add(Calendar.DAY_OF_MONTH, numeroNoches);
+        return calendar.getTime();
+    }
+
+    private void normalizarInicioDia(Calendar calendar) {
         calendar.set(Calendar.HOUR_OF_DAY, 0);
         calendar.set(Calendar.MINUTE, 0);
         calendar.set(Calendar.SECOND, 0);
         calendar.set(Calendar.MILLISECOND, 0);
-        calendar.add(Calendar.DAY_OF_MONTH, numeroNoches);
-        return calendar.getTime();
     }
 }

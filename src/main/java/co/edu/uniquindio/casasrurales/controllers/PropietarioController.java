@@ -1,11 +1,19 @@
 package co.edu.uniquindio.casasrurales.controllers;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -13,7 +21,9 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import co.edu.uniquindio.casasrurales.dto.CasaRuralFormDTO;
 import co.edu.uniquindio.casasrurales.dto.CasaRuralPropietarioDTO;
@@ -34,8 +44,83 @@ public class PropietarioController {
 
     private final PropietarioService propietarioService;
 
+    @Value("${app.upload.dir:uploads}")
+    private String uploadDir;
+
     public PropietarioController(PropietarioService propietarioService) {
         this.propietarioService = propietarioService;
+    }
+
+    @PostMapping("/fotos")
+    public ResponseEntity<?> subirFotos(
+            @RequestParam("fotos") List<MultipartFile> fotos,
+            Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "Debe estar autenticado"));
+        }
+
+        try {
+            if (fotos == null || fotos.isEmpty() || fotos.stream().allMatch(MultipartFile::isEmpty)) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("error", "Debes seleccionar al menos una foto"));
+            }
+
+            Path carpetaFotos = Paths.get(uploadDir, "fotos").toAbsolutePath().normalize();
+            Files.createDirectories(carpetaFotos);
+
+            List<String> urls = fotos.stream()
+                    .filter(foto -> !foto.isEmpty())
+                    .map(foto -> guardarFoto(foto, carpetaFotos))
+                    .collect(Collectors.toList());
+
+            return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("urls", urls));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", ex.getMessage()));
+        } catch (IOException ex) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "No fue posible guardar las fotos"));
+        }
+    }
+
+    private String guardarFoto(MultipartFile foto, Path carpetaFotos) {
+        String nombreOriginal = StringUtils.cleanPath(foto.getOriginalFilename() != null ? foto.getOriginalFilename() : "");
+        String extension = obtenerExtension(nombreOriginal);
+        validarFoto(foto, extension);
+
+        String nombreArchivo = UUID.randomUUID() + extension;
+        Path destino = carpetaFotos.resolve(nombreArchivo).normalize();
+
+        try {
+            foto.transferTo(destino);
+        } catch (IOException ex) {
+            throw new IllegalArgumentException("No fue posible guardar la foto " + nombreOriginal);
+        }
+
+        return "/uploads/fotos/" + nombreArchivo;
+    }
+
+    private String obtenerExtension(String nombreArchivo) {
+        int posicionPunto = nombreArchivo.lastIndexOf('.');
+        if (posicionPunto < 0) {
+            return "";
+        }
+        return nombreArchivo.substring(posicionPunto).toLowerCase();
+    }
+
+    private void validarFoto(MultipartFile foto, String extension) {
+        String contentType = foto.getContentType();
+        boolean tipoPermitido = "image/jpeg".equals(contentType)
+                || "image/png".equals(contentType)
+                || "image/webp".equals(contentType);
+        boolean extensionPermitida = extension.equals(".jpg")
+                || extension.equals(".jpeg")
+                || extension.equals(".png")
+                || extension.equals(".webp");
+
+        if (!tipoPermitido || !extensionPermitida) {
+            throw new IllegalArgumentException("Las fotos deben estar en formato JPG, PNG o WEBP");
+        }
     }
 
     /**

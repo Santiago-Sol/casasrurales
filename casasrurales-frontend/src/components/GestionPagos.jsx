@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { formatFecha } from '../utils/formatFecha';
+import { notificarSiEsError } from '../utils/notificaciones';
 
 export default function GestionPagos({ onClose }) {
   const [reservas, setReservas] = useState([]);
@@ -17,6 +18,7 @@ export default function GestionPagos({ onClose }) {
   const mostrarMensaje = (texto, tipo = 'info') => {
     setMensaje(texto);
     setTipoMensaje(tipo);
+    notificarSiEsError(texto, tipo);
   };
 
   const cargarDatos = async () => {
@@ -101,6 +103,9 @@ export default function GestionPagos({ onClose }) {
   };
 
   const reservasPendientes = reservas.filter((reserva) => reserva.estado === 'PENDIENTE_PAGO');
+  const reservasConfirmadas = reservas.filter((reserva) => reserva.estado === 'CONFIRMADA');
+  const formatearMoneda = (valor) => `$${Number(valor || 0).toLocaleString()}`;
+  const reservaPagadaCompleta = (reserva) => Number(reserva.saldoPendiente || 0) <= 0;
 
   return (
     <div className="modal-overlay">
@@ -117,6 +122,46 @@ export default function GestionPagos({ onClose }) {
           <p>Cargando reservas...</p>
         ) : (
           <>
+            <section style={{ marginBottom: '24px' }}>
+              <h4>Pagos aprobados por clientes</h4>
+              {reservasConfirmadas.length === 0 ? (
+                <p>No hay pagos aprobados desde la pasarela.</p>
+              ) : (
+                <div className="tabla-wrapper">
+                  <table className="tabla-casas">
+                    <thead>
+                      <tr>
+                        <th>Reserva</th>
+                        <th>Casa</th>
+                        <th>Entrada</th>
+                        <th>Pagado</th>
+                        <th>Saldo</th>
+                        <th>Estado</th>
+                        <th>Notificacion</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {reservasConfirmadas.map((reserva) => (
+                        <tr key={reserva.numeroReserva}>
+                          <td>{reserva.numeroReserva}</td>
+                          <td>{reserva.nombreCasa}</td>
+                          <td>{formatFecha(reserva.fechaEntrada)}</td>
+                          <td>{formatearMoneda(reserva.importePagado)}</td>
+                          <td>{formatearMoneda(reserva.saldoPendiente)}</td>
+                          <td>{reserva.estado}</td>
+                          <td>
+                            {reservaPagadaCompleta(reserva)
+                              ? 'Reserva pagada completamente'
+                              : 'Anticipo pagado por el cliente'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
+
             <section style={{ marginBottom: '24px' }}>
               <h4>Registrar pagos recibidos</h4>
               {reservasPendientes.length === 0 ? (
