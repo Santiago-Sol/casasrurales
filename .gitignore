@@ -31,3 +31,7 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Frontend
+casasrurales-frontend/node_modules
+casasrurales-frontend/.env
