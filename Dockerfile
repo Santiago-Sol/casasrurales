@@ -6,7 +6,7 @@ WORKDIR /app
 COPY pom.xml .
 RUN mvn dependency:go-offline -B
 
-COPY casasrurales-frontend/src ./src
+COPY src ./src
 RUN mvn clean package -DskipTests -B
 
 # ─── ETAPA 2: RUNTIME ─────────────────────────────────────────────────────────
