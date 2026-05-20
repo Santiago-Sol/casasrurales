@@ -212,7 +212,8 @@ public class BusquedaCasasService {
                 numCocinas,
                 capacidadHuespedes,
                 casa.getDescripcionGeneral(),
-                casa.getPropietario().getNombreCuenta()
+                casa.getPropietario().getNombreCuenta(),
+                obtenerUrlsFotos(casa.getCodigoCasa())
         );
     }
 
@@ -266,13 +267,16 @@ public class BusquedaCasasService {
         detalle.setBanos(banosDTO);
 
         // Obtener fotos
-        List<Foto> fotos = fotoRepository.findByCasaRuralCodigoCasa(casa.getCodigoCasa());
-        List<String> urlsFotos = fotos.stream()
-                .map(Foto::getRuta)
-                .collect(Collectors.toList());
-        detalle.setUrlsFotos(urlsFotos);
+        detalle.setUrlsFotos(obtenerUrlsFotos(casa.getCodigoCasa()));
 
         return detalle;
+    }
+
+    private List<String> obtenerUrlsFotos(int codigoCasa) {
+        return fotoRepository.findByCasaRuralCodigoCasa(codigoCasa).stream()
+                .map(Foto::getRuta)
+                .filter(ruta -> ruta != null && !ruta.isBlank() && !"SIN_RUTA".equalsIgnoreCase(ruta))
+                .collect(Collectors.toList());
     }
 
     private int capacidadHuespedes(CasaRural casa) {

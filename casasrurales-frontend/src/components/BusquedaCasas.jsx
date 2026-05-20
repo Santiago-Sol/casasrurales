@@ -358,8 +358,21 @@ export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin, onAu
   }
 
   const imagenCasa = (casa, index = 0) => {
-    if (casa.urlsFotos?.length) return casa.urlsFotos[0]
+    if (casa.urlsFotos?.length) return normalizarUrlFoto(casa.urlsFotos[0])
     return imagenesCasas[index % imagenesCasas.length]
+  }
+
+  const normalizarUrlFoto = (url) => {
+    if (!url) return ''
+    if (/^https?:\/\//i.test(url)) return url
+    if (url.startsWith('/')) return url
+    return `/${url}`
+  }
+
+  const usarImagenAlterna = (event, index = 0) => {
+    if (event.currentTarget.dataset.fallback === 'true') return
+    event.currentTarget.dataset.fallback = 'true'
+    event.currentTarget.src = imagenesCasas[index % imagenesCasas.length]
   }
 
   const formatearEnum = (valor) => {
@@ -463,7 +476,11 @@ export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin, onAu
             {casasOrdenadas.map((casa, index) => (
               <article className="property-card" key={casa.codigoCasa}>
                 <button className="image-button" onClick={() => buscarPorCodigo(casa.codigoCasa)}>
-                  <img src={imagenCasa(casa, index)} alt={casa.nombrePropiedad} />
+                  <img
+                    src={imagenCasa(casa, index)}
+                    alt={casa.nombrePropiedad}
+                    onError={(event) => usarImagenAlterna(event, index)}
+                  />
                   <span className="badge">Disponible</span>
                   <span className="badge badge-yellow">Rural</span>
                   <span className="preview-meta">
@@ -508,7 +525,11 @@ export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin, onAu
         <div className="detail-overlay" onClick={() => setDetalle(null)}>
           <section className="detail-modal" onClick={(event) => event.stopPropagation()}>
             <button className="close-detail" onClick={() => setDetalle(null)}>x</button>
-            <img src={imagenCasa(detalle)} alt={detalle.nombrePropiedad} />
+            <img
+              src={imagenCasa(detalle)}
+              alt={detalle.nombrePropiedad}
+              onError={(event) => usarImagenAlterna(event)}
+            />
             <div className="detail-content">
               <p className="location">{detalle.poblacion}</p>
               <h2>{detalle.nombrePropiedad}</h2>

@@ -1,5 +1,7 @@
 package co.edu.uniquindio.casasrurales.dto;
 
+import java.util.List;
+
 /**
  * DTO para listar casas rurales con paquetes activos en búsquedas.
  * Contiene información resumida de la casa para mostrar en lista.
@@ -15,6 +17,7 @@ public class CasaRuralListadoDTO {
     private int capacidadHuespedes;
     private String descripcionGeneral;
     private String nombrePropietario;
+    private List<String> urlsFotos;
 
     public CasaRuralListadoDTO(int codigoCasa, String nombrePropiedad, String poblacion, int numDormitorios,
                               int numBanos, int numCocinas, String descripcionGeneral,
@@ -26,6 +29,13 @@ public class CasaRuralListadoDTO {
     public CasaRuralListadoDTO(int codigoCasa, String nombrePropiedad, String poblacion, int numDormitorios,
                               int numBanos, int numCocinas, int capacidadHuespedes, String descripcionGeneral,
                               String nombrePropietario) {
+        this(codigoCasa, nombrePropiedad, poblacion, numDormitorios, numBanos, numCocinas,
+                capacidadHuespedes, descripcionGeneral, nombrePropietario, List.of());
+    }
+
+    public CasaRuralListadoDTO(int codigoCasa, String nombrePropiedad, String poblacion, int numDormitorios,
+                              int numBanos, int numCocinas, int capacidadHuespedes, String descripcionGeneral,
+                              String nombrePropietario, List<String> urlsFotos) {
         this.codigoCasa = codigoCasa;
         this.nombrePropiedad = nombrePropiedad;
         this.poblacion = poblacion;
@@ -35,6 +45,7 @@ public class CasaRuralListadoDTO {
         this.capacidadHuespedes = capacidadHuespedes;
         this.descripcionGeneral = descripcionGeneral;
         this.nombrePropietario = nombrePropietario;
+        this.urlsFotos = urlsFotos == null ? List.of() : List.copyOf(urlsFotos);
     }
 
     // Getters
@@ -72,5 +83,9 @@ public class CasaRuralListadoDTO {
 
     public String getNombrePropietario() {
         return nombrePropietario;
+    }
+
+    public List<String> getUrlsFotos() {
+        return urlsFotos;
     }
 }
