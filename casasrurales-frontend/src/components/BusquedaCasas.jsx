@@ -362,6 +362,18 @@ export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin, onAu
     return imagenesCasas[index % imagenesCasas.length]
   }
 
+  const formatearEnum = (valor) => {
+    if (!valor) return 'Sin especificar'
+    return String(valor)
+      .toLowerCase()
+      .replaceAll('_', ' ')
+      .replace(/\b\w/g, (letra) => letra.toUpperCase())
+  }
+
+  const habitacionesDetalle = Array.isArray(detalle?.habitaciones) ? detalle.habitaciones : []
+  const cocinasDetalle = Array.isArray(detalle?.cocinas) ? detalle.cocinas : []
+  const banosDetalle = Array.isArray(detalle?.banos) ? detalle.banos : []
+
   return (
     <main className="catalog-page">
       <section className="catalog-hero">
@@ -506,6 +518,79 @@ export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin, onAu
                 <span>{detalle.numBanos} baños</span>
                 <span>{detalle.numCocinas} cocinas</span>
                 <span>{detalle.numPlazasGaraje} garajes</span>
+              </div>
+
+              <div className="detail-sections">
+                <section className="detail-section">
+                  <div className="detail-section-title">
+                    <h3>Habitaciones</h3>
+                    <span>{habitacionesDetalle.length}</span>
+                  </div>
+                  {habitacionesDetalle.length > 0 ? (
+                    <div className="detail-list">
+                      {habitacionesDetalle.map((habitacion, index) => (
+                        <article className="detail-item" key={habitacion.idHabitacion || habitacion.codigoHabitacion || index}>
+                          <div>
+                            <strong>Habitación {habitacion.codigoHabitacion || index + 1}</strong>
+                            <p>
+                              {habitacion.numeroCamas} {habitacion.numeroCamas === 1 ? 'cama' : 'camas'} - {formatearEnum(habitacion.tipoCama)}
+                            </p>
+                          </div>
+                          <span className={`feature-pill ${habitacion.tieneBano ? 'feature-pill-ok' : ''}`}>
+                            {habitacion.tieneBano ? 'Con baño' : 'Sin baño'}
+                          </span>
+                        </article>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="detail-empty">No hay habitaciones detalladas para esta casa.</p>
+                  )}
+                </section>
+
+                <section className="detail-section">
+                  <div className="detail-section-title">
+                    <h3>Cocinas</h3>
+                    <span>{cocinasDetalle.length}</span>
+                  </div>
+                  {cocinasDetalle.length > 0 ? (
+                    <div className="detail-list">
+                      {cocinasDetalle.map((cocina, index) => (
+                        <article className="detail-item detail-item-stacked" key={`cocina-${index}`}>
+                          <strong>Cocina {index + 1}</strong>
+                          <div className="feature-row">
+                            <span className={`feature-pill ${cocina.tieneLavavajillas ? 'feature-pill-ok' : ''}`}>
+                              {cocina.tieneLavavajillas ? 'Lavavajillas' : 'Sin lavavajillas'}
+                            </span>
+                            <span className={`feature-pill ${cocina.tieneLavadora ? 'feature-pill-ok' : ''}`}>
+                              {cocina.tieneLavadora ? 'Lavadora' : 'Sin lavadora'}
+                            </span>
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="detail-empty">No hay cocinas detalladas para esta casa.</p>
+                  )}
+                </section>
+
+                <section className="detail-section detail-section-wide">
+                  <div className="detail-section-title">
+                    <h3>Baños</h3>
+                    <span>{banosDetalle.length}</span>
+                  </div>
+                  {banosDetalle.length > 0 ? (
+                    <div className="bath-list">
+                      {banosDetalle.map((bano, index) => (
+                        <article className="bath-item" key={`bano-${index}`}>
+                          <strong>Baño {index + 1}</strong>
+                          <p>{bano.observaciones || 'Sin observaciones adicionales.'}</p>
+                        </article>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="detail-empty">No hay baños detallados para esta casa.</p>
+                  )}
+                </section>
               </div>
               <p className="owner">Teléfono: {detalle.telefonoPropietario}</p>
               <button 

@@ -459,7 +459,7 @@
   background: white;
   border-radius: 8px;
   max-height: 90vh;
-  max-width: 860px;
+  max-width: 980px;
   overflow: auto;
   position: relative;
   width: 100%;
@@ -514,6 +514,110 @@
   font-weight: 900;
   padding: 12px;
   text-align: center;
+}
+
+.detail-sections {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 8px 0 22px;
+}
+
+.detail-section {
+  background: #fbfaf2;
+  border: 1px solid #d9c66a;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.detail-section-wide {
+  grid-column: 1 / -1;
+}
+
+.detail-section-title {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.detail-section-title h3 {
+  color: #17351f;
+  font-size: 20px;
+  margin: 0;
+}
+
+.detail-section-title span {
+  background: #1f7a3f;
+  border-radius: 999px;
+  color: white;
+  font-weight: 900;
+  min-width: 34px;
+  padding: 5px 10px;
+  text-align: center;
+}
+
+.detail-list,
+.bath-list {
+  display: grid;
+  gap: 10px;
+}
+
+.detail-item,
+.bath-item {
+  align-items: center;
+  background: white;
+  border: 1px solid #e5dfbf;
+  border-radius: 8px;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 12px;
+}
+
+.detail-item-stacked {
+  align-items: stretch;
+  flex-direction: column;
+}
+
+.detail-item strong,
+.bath-item strong {
+  color: #17351f;
+  display: block;
+  font-size: 16px;
+  margin-bottom: 4px;
+}
+
+.detail-item p,
+.bath-item p,
+.detail-empty {
+  color: #4e5f42;
+  font-size: 15px;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.feature-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.feature-pill {
+  background: #f4ead1;
+  border: 1px solid #d7bd65;
+  border-radius: 999px;
+  color: #5d4a00;
+  flex-shrink: 0;
+  font-size: 14px;
+  font-weight: 900;
+  padding: 7px 10px;
+}
+
+.feature-pill-ok {
+  background: #e4f5d8;
+  border-color: #8fc669;
+  color: #1f5a2e;
 }
 
 .owner {
@@ -580,6 +684,10 @@
 
   .detail-specs {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .detail-sections {
+    grid-template-columns: 1fr;
   }
 
   .property-grid {
