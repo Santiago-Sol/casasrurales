@@ -100,6 +100,33 @@ export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin, onAu
       }
 
       if (!response.ok) {
+        if (response.status === 404 && poblacionOCodigo) {
+          const fallbackResponse = await fetch(`/api/busqueda/por-poblacion?poblacion=${encodeURIComponent(poblacionOCodigo)}`, {
+            credentials: 'include'
+          })
+
+          if (fallbackResponse.status === 204) {
+            mostrarMensaje('No encontramos casas con esos filtros', 'info')
+            return
+          }
+
+          if (fallbackResponse.ok) {
+            const data = await fallbackResponse.json()
+            const casasDisponibles = fechaEntrada && noches > 0
+              ? (await Promise.all(data.map(async (casa) => ({
+                  casa,
+                  disponible: await consultarDisponibilidadCasa(casa)
+                })))).filter(({ disponible }) => disponible).map(({ casa }) => casa)
+              : data
+
+            setResultados(casasDisponibles)
+            if (!silencioso) {
+              mostrarMensaje(`${casasDisponibles.length} casas rurales encontradas`, 'exito')
+            }
+            return
+          }
+        }
+
         mostrarMensaje('No fue posible cargar las casas disponibles', 'error')
         return
       }
@@ -131,6 +158,11 @@ export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin, onAu
       }
 
       if (!response.ok) {
+        if (response.status === 404) {
+          mostrarMensaje('El catalogo general aun no esta disponible en el servidor publicado', 'info')
+          return
+        }
+
         mostrarMensaje('No fue posible cargar las casas disponibles', 'error')
         return
       }
