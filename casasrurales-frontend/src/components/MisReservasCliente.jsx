@@ -15,6 +15,8 @@ export default function MisReservasCliente() {
     vencimiento: '',
     cvv: ''
   });
+  const [facturaActual, setFacturaActual] = useState(null);
+  const [verFactura, setVerFactura] = useState(false);
 
   useEffect(() => {
     const fetchMisReservas = async () => {
@@ -49,6 +51,68 @@ export default function MisReservasCliente() {
       return Number(reserva.importeAConsignar ?? reserva.importeAnticipo ?? 0);
     }
     return saldoPendiente(reserva);
+  };
+
+  const abrirFactura = (reserva) => {
+    setFacturaActual(reserva);
+    setVerFactura(true);
+  };
+
+  const cerrarFactura = () => {
+    setFacturaActual(null);
+    setVerFactura(false);
+  };
+
+  const descargarFactura = (reserva) => {
+    const r = reserva || facturaActual;
+    if (!r) return;
+    const html = `
+      <html>
+      <head>
+        <meta charset="utf-8" />
+        <title>Factura Reserva ${r.numeroReserva}</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 24px; color: #17351f }
+          h1 { font-size: 20px }
+          .section { margin-bottom: 12px }
+          .right { float: right }
+          table { width: 100%; border-collapse: collapse }
+          td, th { padding: 8px; border-bottom: 1px solid #eee }
+        </style>
+      </head>
+      <body>
+        <h1>Factura - Reserva #${r.numeroReserva}</h1>
+        <div class="section">
+          <strong>Casa:</strong> ${r.nombreCasa || r.nombrePropiedad || ''} <span class="right"><strong>Estado:</strong> ${r.estado}</span>
+        </div>
+        <div class="section">
+          <div><strong>Fecha Entrada:</strong> ${formatFecha(r.fechaEntrada)}</div>
+          <div><strong>Noches:</strong> ${r.numeroNoches}</div>
+          <div><strong>Poblacion:</strong> ${r.poblacionCasa || r.poblacion || ''}</div>
+        </div>
+        <div class="section">
+          <table>
+            <tr><td>Importe Total</td><td style="text-align:right">$${Number(r.importeTotal || 0).toLocaleString()}</td></tr>
+            <tr><td>Anticipo</td><td style="text-align:right">$${Number(r.importeAnticipo || 0).toLocaleString()}</td></tr>
+            <tr><td>Importe Pagado</td><td style="text-align:right">$${Number(r.importePagado || 0).toLocaleString()}</td></tr>
+            <tr><td>Saldo Pendiente</td><td style="text-align:right">$${Number(r.saldoPendiente || 0).toLocaleString()}</td></tr>
+          </table>
+        </div>
+        <div class="section">Gracias por su reserva.</div>
+        <script>
+          window.onload = function() { window.print(); }
+        </script>
+      </body>
+      </html>
+    `;
+
+    const w = window.open('', '_blank');
+    if (!w) {
+      alert('Permite ventanas emergentes para descargar la factura.');
+      return;
+    }
+    w.document.write(html);
+    w.document.close();
   };
 
   const puedePagar = (reserva) =>
@@ -111,6 +175,9 @@ export default function MisReservasCliente() {
           reserva.numeroReserva === data.reserva.numeroReserva ? data.reserva : reserva
         )
       );
+      // abrir factura después de pago
+      setFacturaActual(data.reserva);
+      setVerFactura(true);
       setReservaPago(null);
       setMensaje(data.mensaje || 'Pago aprobado y reserva confirmada');
       setTipoMensaje('exito');
@@ -222,6 +289,14 @@ export default function MisReservasCliente() {
                   </button>
                 </div>
               )}
+              <div style={{ marginTop: '10px', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                <button type="button" className="btn-secondary" onClick={() => abrirFactura(reserva)}>
+                  Ver factura
+                </button>
+                <button type="button" className="btn-primary-action" onClick={() => descargarFactura(reserva)}>
+                  Descargar PDF
+                </button>
+              </div>
             </div>
           ))}
         </div>
@@ -308,6 +383,32 @@ export default function MisReservasCliente() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {verFactura && facturaActual && (
+        <div className="modal-overlay" onClick={cerrarFactura}>
+          <div className="modal-contenido" style={{ maxWidth: '720px' }} onClick={(e) => e.stopPropagation()}>
+            <h3>Factura - Reserva #{facturaActual.numeroReserva}</h3>
+            <div style={{ padding: 12 }}>
+              <div style={{ marginBottom: 8 }}><strong>Casa:</strong> {facturaActual.nombreCasa || facturaActual.nombrePropiedad || ''} <span style={{ float: 'right' }}><strong>Estado:</strong> {facturaActual.estado}</span></div>
+              <div style={{ marginBottom: 8 }}><strong>Fecha Entrada:</strong> {formatFecha(facturaActual.fechaEntrada)}</div>
+              <div style={{ marginBottom: 8 }}><strong>Noches:</strong> {facturaActual.numeroNoches}</div>
+              <div style={{ marginBottom: 8 }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <tbody>
+                    <tr><td style={{ padding: 8 }}>Importe Total</td><td style={{ padding: 8, textAlign: 'right' }}>${Number(facturaActual.importeTotal || 0).toLocaleString()}</td></tr>
+                    <tr><td style={{ padding: 8 }}>Anticipo</td><td style={{ padding: 8, textAlign: 'right' }}>${Number(facturaActual.importeAnticipo || 0).toLocaleString()}</td></tr>
+                    <tr><td style={{ padding: 8 }}>Importe Pagado</td><td style={{ padding: 8, textAlign: 'right' }}>${Number(facturaActual.importePagado || 0).toLocaleString()}</td></tr>
+                    <tr><td style={{ padding: 8 }}>Saldo Pendiente</td><td style={{ padding: 8, textAlign: 'right' }}>${Number(facturaActual.saldoPendiente || 0).toLocaleString()}</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div className="modal-botones">
+              <button type="button" className="btn-cancelar" onClick={cerrarFactura}>Cerrar</button>
+              <button type="button" className="btn-primary-action" onClick={() => descargarFactura(facturaActual)}>Descargar PDF</button>
+            </div>
           </div>
         </div>
       )}

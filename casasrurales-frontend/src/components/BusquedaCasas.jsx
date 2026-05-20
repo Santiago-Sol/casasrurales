@@ -30,6 +30,10 @@ export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin, onAu
   const [mensaje, setMensaje] = useState('')
   const [tipoMensaje, setTipoMensaje] = useState('info')
   const [casaReservando, setCasaReservando] = useState(null)
+  const [favoritos, setFavoritos] = useState(new Set())
+  const [nuevaCalificacion, setNuevaCalificacion] = useState(0)
+  const [nuevoComentario, setNuevoComentario] = useState('')
+  const [enviandoValoracion, setEnviandoValoracion] = useState(false)
   const [paginaActual, setPaginaActual] = useState(0)
   const [totalPaginas, setTotalPaginas] = useState(1)
   const [totalResultados, setTotalResultados] = useState(0)
@@ -296,6 +300,102 @@ export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin, onAu
     return dias.every((dia) => dia.estadoCasaEntera === 'LIBRE')
   }
 
+  const cargarFavoritos = async () => {
+    if (!usuarioAutenticado) return
+    try {
+      const resp = await fetch('/api/cliente/favoritos', { credentials: 'include' })
+      if (!resp.ok) return
+      const data = await resp.json()
+      const set = new Set((data || []).map(d => Number(d.codigoCasa)))
+      setFavoritos(set)
+    } catch (e) {
+      console.error('Error cargando favoritos', e)
+    }
+  }
+
+  useEffect(() => {
+    cargarFavoritos()
+  }, [usuarioAutenticado])
+
+  const esFavorito = (codigoCasa) => {
+    return favoritos && favoritos.has(Number(codigoCasa))
+  }
+
+  const toggleFavorito = async (codigoCasa, event) => {
+    if (event) event.stopPropagation()
+    if (!usuarioAutenticado) {
+      onRequireLogin()
+      return
+    }
+
+    try {
+      const resp = await fetch(`/api/cliente/favoritos/${codigoCasa}`, {
+        method: 'POST',
+        credentials: 'include'
+      })
+      if (!resp.ok) {
+        mostrarMensaje('No fue posible actualizar favoritos', 'error')
+        return
+      }
+      const body = await resp.json()
+      const nuevoEstado = body?.esFavorito === true
+      setFavoritos(prev => {
+        const copia = new Set(prev)
+        if (nuevoEstado) copia.add(Number(codigoCasa))
+        else copia.delete(Number(codigoCasa))
+        return copia
+      })
+      mostrarMensaje(body?.mensaje || (nuevoEstado ? 'Agregado a favoritos' : 'Eliminado de favoritos'), 'exito')
+    } catch (e) {
+      console.error(e)
+      mostrarMensaje('Error de conexion al actualizar favoritos', 'error')
+    }
+  }
+
+  const renderStars = (valor, max = 5) => {
+    const full = Math.round(valor || 0)
+    const stars = []
+    for (let i = 1; i <= max; i++) {
+      stars.push(<span key={i} className="estrellas">{i <= full ? '★' : '☆'}</span>)
+    }
+    return <span className="estrellas">{stars}</span>
+  }
+
+  const registrarValoracion = async () => {
+    if (!usuarioAutenticado) {
+      onRequireLogin()
+      return
+    }
+    if (!detalle) return
+    if (!nuevaCalificacion || nuevaCalificacion < 1) {
+      mostrarMensaje('Selecciona al menos 1 estrella', 'info')
+      return
+    }
+    setEnviandoValoracion(true)
+    try {
+      const resp = await fetch(`/api/cliente/valoracion/${detalle.codigoCasa}`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ calificacion: nuevaCalificacion, comentario: nuevoComentario })
+      })
+      if (!resp.ok) {
+        mostrarMensaje('No fue posible registrar la valoración', 'error')
+        return
+      }
+      mostrarMensaje('Valoración registrada', 'exito')
+      setNuevaCalificacion(0)
+      setNuevoComentario('')
+      // refrescar detalle
+      await buscarPorCodigo(detalle.codigoCasa)
+    } catch (e) {
+      console.error(e)
+      mostrarMensaje('Error de conexion al enviar valoración', 'error')
+    } finally {
+      setEnviandoValoracion(false)
+    }
+  }
+
   const buscarPorCodigoComoResultado = async (codigo) => {
     limpiarVista()
     const casa = await buscarPorCodigo(codigo, false)
@@ -481,6 +581,16 @@ export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin, onAu
                     alt={casa.nombrePropiedad}
                     onError={(event) => usarImagenAlterna(event, index)}
                   />
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    className={`fav-heart-btn ${esFavorito(casa.codigoCasa) ? 'active' : ''}`}
+                    onClick={(e) => toggleFavorito(casa.codigoCasa, e)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') toggleFavorito(casa.codigoCasa, e) }}
+                    aria-label={esFavorito(casa.codigoCasa) ? 'Quitar favorito' : 'Agregar favorito'}
+                  >
+                    {esFavorito(casa.codigoCasa) ? '❤' : '♡'}
+                  </span>
                   <span className="badge">Disponible</span>
                   <span className="badge badge-yellow">Rural</span>
                   <span className="preview-meta">
@@ -531,6 +641,18 @@ export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin, onAu
               onError={(event) => usarImagenAlterna(event)}
             />
             <div className="detail-content">
+              <div className="calificacion-media">
+                <strong>Promedio:</strong>
+                <span style={{marginLeft:8}}>{detalle.promedioCalificacion ? detalle.promedioCalificacion : 'Sin calificaciones'}</span>
+                <span style={{marginLeft:8}}>{renderStars(detalle.promedioCalificacion)}</span>
+              </div>
+
+              <div className="map-container map-container-large" aria-hidden={false}>
+                <iframe
+                  title="Mapa ubicación"
+                  src={`https://www.google.com/maps?q=${encodeURIComponent(`${detalle.nombrePropiedad} ${detalle.poblacion}`)}&output=embed`}
+                />
+              </div>
               <p className="location">{detalle.poblacion}</p>
               <h2>{detalle.nombrePropiedad}</h2>
               <p>{detalle.descripcionGeneral || 'Casa rural con espacios completos para descansar.'}</p>
@@ -613,6 +735,47 @@ export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin, onAu
                   )}
                 </section>
               </div>
+              <div className="rating-form">
+                <h3>Deja tu valoración</h3>
+                <div className="star-rating-selector">
+                  {[1,2,3,4,5].map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      className="star-btn"
+                      onClick={() => setNuevaCalificacion(s)}
+                      aria-label={`${s} estrellas`}
+                    >
+                      {s <= nuevaCalificacion ? '★' : '☆'}
+                    </button>
+                  ))}
+                </div>
+                <textarea placeholder="Escribe un comentario (opcional)" value={nuevoComentario} onChange={(e) => setNuevoComentario(e.target.value)} />
+                <div style={{display:'flex',justifyContent:'flex-end',marginTop:8}}>
+                  <button type="button" onClick={registrarValoracion} disabled={enviandoValoracion}>
+                    {enviandoValoracion ? 'Enviando...' : 'Enviar valoración'}
+                  </button>
+                </div>
+              </div>
+
+              <div className="reviews-feed">
+                <h3>Reseñas</h3>
+                {Array.isArray(detalle.valoraciones) && detalle.valoraciones.length > 0 ? (
+                  detalle.valoraciones.map((r) => (
+                    <article className="review-card" key={r.id}>
+                      <div className="review-header">
+                        <div className="review-author">{r.email}</div>
+                        <div className="review-stars">{renderStars(r.calificacion)}</div>
+                      </div>
+                      <p className="review-comment">{r.comentario}</p>
+                      {r.fechaCreacion && <span className="review-date">{new Date(r.fechaCreacion).toLocaleDateString()}</span>}
+                    </article>
+                  ))
+                ) : (
+                  <p className="detail-empty">Aún no hay reseñas para esta casa.</p>
+                )}
+              </div>
+
               <p className="owner">Teléfono: {detalle.telefonoPropietario}</p>
               <button 
                 className="btn-primary-action" 
