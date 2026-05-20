@@ -12,6 +12,13 @@ const imagenesCasas = [
 
 const TAMANO_PAGINA = 6
 
+const obtenerFechaLocalISO = (fecha = new Date()) => {
+  const anio = fecha.getFullYear()
+  const mes = String(fecha.getMonth() + 1).padStart(2, '0')
+  const dia = String(fecha.getDate()).padStart(2, '0')
+  return `${anio}-${mes}-${dia}`
+}
+
 export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin, onAuthExpired }) {
   const [termino, setTermino] = useState('')
   const [fechaEntrada, setFechaEntrada] = useState('')
@@ -26,6 +33,7 @@ export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin, onAu
   const [paginaActual, setPaginaActual] = useState(0)
   const [totalPaginas, setTotalPaginas] = useState(1)
   const [totalResultados, setTotalResultados] = useState(0)
+  const hoyISO = useMemo(() => obtenerFechaLocalISO(), [])
 
   const casasOrdenadas = useMemo(
     () => {
@@ -96,6 +104,16 @@ export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin, onAu
     const poblacionOCodigo = termino.trim()
     const esCodigo = /^\d+$/.test(poblacionOCodigo)
     const noches = calcularNoches()
+
+    if (fechaEntrada && fechaEntrada < hoyISO) {
+      mostrarMensaje('La fecha de entrada no puede ser anterior a hoy', 'info')
+      return
+    }
+
+    if (fechaSalida && !fechaEntrada) {
+      mostrarMensaje('Selecciona una fecha de entrada', 'info')
+      return
+    }
 
     if ((fechaEntrada || fechaSalida) && noches === 0) {
       mostrarMensaje('Selecciona una fecha de salida posterior a la entrada', 'info')
@@ -308,6 +326,18 @@ export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin, onAu
     cargarCasasDisponibles(false, 0)
   }
 
+  const manejarCambioFechaEntrada = (event) => {
+    const nuevaFecha = event.target.value
+    setFechaEntrada(nuevaFecha)
+    if (fechaSalida && nuevaFecha && fechaSalida <= nuevaFecha) {
+      setFechaSalida('')
+    }
+  }
+
+  const manejarCambioFechaSalida = (event) => {
+    setFechaSalida(event.target.value)
+  }
+
   const limpiarFiltros = () => {
     setTermino('')
     setFechaEntrada('')
@@ -359,8 +389,9 @@ export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin, onAu
               <span>Entrada</span>
               <input
                 type="date"
+                min={hoyISO}
                 value={fechaEntrada}
-                onChange={(event) => setFechaEntrada(event.target.value)}
+                onChange={manejarCambioFechaEntrada}
               />
             </label>
 
@@ -368,9 +399,9 @@ export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin, onAu
               <span>Salida</span>
               <input
                 type="date"
-                min={fechaEntrada || undefined}
+                min={fechaEntrada || hoyISO}
                 value={fechaSalida}
-                onChange={(event) => setFechaSalida(event.target.value)}
+                onChange={manejarCambioFechaSalida}
               />
             </label>
 
