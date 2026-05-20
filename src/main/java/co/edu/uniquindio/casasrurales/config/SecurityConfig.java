@@ -40,6 +40,7 @@ public class SecurityConfig {
                         // Operaciones privadas por rol
                         .requestMatchers("/api/propietario/**").hasAnyAuthority("PROPIETARIO", "ROLE_PROPIETARIO")
                         .requestMatchers("/api/reservas/**").hasAnyAuthority("CLIENTE", "ROLE_CLIENTE")
+                        .requestMatchers("/api/clientes/**").hasAnyAuthority("CLIENTE", "ROLE_CLIENTE")
                         // Cualquier otra solicitud requiere autenticación
                         .anyRequest().authenticated()
                 )

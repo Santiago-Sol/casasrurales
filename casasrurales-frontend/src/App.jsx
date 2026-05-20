@@ -6,6 +6,7 @@ import RegistroCliente from './components/RegistroCliente'
 import BusquedaCasas from './components/BusquedaCasas'
 import DashboardPropietario from './components/DashboardPropietario'
 import MisReservasCliente from './components/MisReservasCliente'
+import FavoritosCliente from './components/FavoritosCliente'
 
 function App() {
   const [seccionActiva, setSeccionActiva] = useState('busqueda')
@@ -137,6 +138,14 @@ function App() {
       )
     }
 
+    if (seccionActiva === 'favoritos' && esCliente) {
+      return (
+        <main className="main-content">
+          <FavoritosCliente onVerCasas={() => setSeccionActiva('busqueda')} />
+        </main>
+      )
+    }
+
     return <BusquedaCasas 
              usuarioAutenticado={usuarioAutenticado} 
              onRequireLogin={() => setSeccionActiva('login')} 
@@ -182,6 +191,14 @@ function App() {
                   onClick={() => setSeccionActiva('mis-reservas')}
                 >
                   Mis Reservas
+                </button>
+              )}
+              {esCliente && (
+                <button
+                  className={seccionActiva === 'favoritos' ? 'nav-button active' : 'nav-button'}
+                  onClick={() => setSeccionActiva('favoritos')}
+                >
+                  Favoritos
                 </button>
               )}
               {usuarioAutenticado ? (

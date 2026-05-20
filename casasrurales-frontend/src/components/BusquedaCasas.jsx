@@ -33,7 +33,12 @@ export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin, onAu
   const [paginaActual, setPaginaActual] = useState(0)
   const [totalPaginas, setTotalPaginas] = useState(1)
   const [totalResultados, setTotalResultados] = useState(0)
+  const [favoritosIds, setFavoritosIds] = useState(new Set())
+  const [valoraciones, setValoraciones] = useState({ promedio: 0, total: 0, valoraciones: [] })
+  const [valoracionForm, setValoracionForm] = useState({ estrellas: 5, comentario: '' })
+  const [guardandoValoracion, setGuardandoValoracion] = useState(false)
   const hoyISO = useMemo(() => obtenerFechaLocalISO(), [])
+  const esCliente = usuarioAutenticado && String(usuarioAutenticado.tipoUsuario).toLowerCase() === 'cliente'
 
   const casasOrdenadas = useMemo(
     () => {
@@ -47,10 +52,51 @@ export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin, onAu
     cargarCasasDisponibles(true)
   }, [])
 
+  useEffect(() => {
+    if (!esCliente) {
+      setFavoritosIds(new Set())
+      return
+    }
+
+    cargarFavoritosCliente()
+  }, [esCliente])
+
   const mostrarMensaje = (texto, tipo = 'info') => {
     setMensaje(texto)
     setTipoMensaje(tipo)
     notificarSiEsError(texto, tipo)
+  }
+
+  const cargarFavoritosCliente = async () => {
+    try {
+      const response = await fetch('/api/clientes/favoritos', { credentials: 'include' })
+      if (!response.ok) return
+
+      const data = await response.json()
+      setFavoritosIds(new Set(data.map((casa) => casa.codigoCasa)))
+    } catch (error) {
+      console.error('No fue posible cargar favoritos', error)
+    }
+  }
+
+  const consultarValoraciones = async (codigoCasa) => {
+    try {
+      const response = await fetch(`/api/busqueda/${codigoCasa}/valoraciones`, { credentials: 'include' })
+      if (!response.ok) {
+        setValoraciones({ promedio: 0, total: 0, valoraciones: [] })
+        return
+      }
+
+      const data = await response.json()
+      setValoraciones({
+        promedio: Number(data.promedio) || 0,
+        total: Number(data.total) || 0,
+        valoraciones: Array.isArray(data.valoraciones) ? data.valoraciones : []
+      })
+    } catch (error) {
+      console.error('No fue posible cargar valoraciones', error)
+      setValoraciones({ promedio: 0, total: 0, valoraciones: [] })
+    }
   }
 
   const limpiarVista = () => {
@@ -266,6 +312,8 @@ export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin, onAu
       const data = await response.json()
       if (abrirDetalle) {
         setDetalle(data)
+        setValoracionForm({ estrellas: 5, comentario: '' })
+        consultarValoraciones(data.codigoCasa)
         mostrarMensaje('Detalle cargado', 'exito')
       }
       return data
@@ -338,6 +386,85 @@ export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin, onAu
     setFechaSalida(event.target.value)
   }
 
+  const alternarFavorito = async (casa, event) => {
+    event?.stopPropagation()
+    if (!esCliente) {
+      mostrarMensaje('Inicia sesión como cliente para guardar favoritos', 'info')
+      onRequireLogin?.()
+      return
+    }
+
+    const yaEsFavorita = favoritosIds.has(casa.codigoCasa)
+    try {
+      const response = await fetch(`/api/clientes/favoritos/${casa.codigoCasa}`, {
+        method: yaEsFavorita ? 'DELETE' : 'POST',
+        credentials: 'include'
+      })
+
+      if (!response.ok) {
+        mostrarMensaje('No fue posible actualizar favoritos', 'error')
+        return
+      }
+
+      setFavoritosIds((actuales) => {
+        const nuevos = new Set(actuales)
+        if (yaEsFavorita) {
+          nuevos.delete(casa.codigoCasa)
+        } else {
+          nuevos.add(casa.codigoCasa)
+        }
+        return nuevos
+      })
+      mostrarMensaje(yaEsFavorita ? 'Casa quitada de favoritos' : 'Casa agregada a favoritos', 'exito')
+    } catch (error) {
+      mostrarMensaje('Error de conexión con favoritos', 'error')
+      console.error(error)
+    }
+  }
+
+  const enviarValoracion = async (event) => {
+    event.preventDefault()
+    if (!detalle) return
+
+    if (!esCliente) {
+      mostrarMensaje('Inicia sesión como cliente para valorar esta casa', 'info')
+      onRequireLogin?.()
+      return
+    }
+
+    setGuardandoValoracion(true)
+    try {
+      const response = await fetch(`/api/clientes/valoraciones/${detalle.codigoCasa}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          estrellas: Number(valoracionForm.estrellas),
+          comentario: valoracionForm.comentario
+        })
+      })
+
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        mostrarMensaje(data.error || 'No fue posible guardar la valoración', 'error')
+        return
+      }
+
+      setValoraciones({
+        promedio: Number(data.promedio) || 0,
+        total: Number(data.total) || 0,
+        valoraciones: Array.isArray(data.valoraciones) ? data.valoraciones : []
+      })
+      setValoracionForm({ estrellas: 5, comentario: '' })
+      mostrarMensaje('Valoración publicada', 'exito')
+    } catch (error) {
+      mostrarMensaje('Error de conexión al guardar la valoración', 'error')
+      console.error(error)
+    } finally {
+      setGuardandoValoracion(false)
+    }
+  }
+
   const limpiarFiltros = () => {
     setTermino('')
     setFechaEntrada('')
@@ -386,6 +513,8 @@ export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin, onAu
   const habitacionesDetalle = Array.isArray(detalle?.habitaciones) ? detalle.habitaciones : []
   const cocinasDetalle = Array.isArray(detalle?.cocinas) ? detalle.cocinas : []
   const banosDetalle = Array.isArray(detalle?.banos) ? detalle.banos : []
+  const valoracionesDetalle = Array.isArray(valoraciones.valoraciones) ? valoraciones.valoraciones : []
+  const estrellasTexto = (cantidad) => '★'.repeat(Number(cantidad) || 0) + '☆'.repeat(Math.max(0, 5 - (Number(cantidad) || 0)))
 
   return (
     <main className="catalog-page">
@@ -475,7 +604,7 @@ export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin, onAu
           <div className="property-grid">
             {casasOrdenadas.map((casa, index) => (
               <article className="property-card" key={casa.codigoCasa}>
-                <button className="image-button" onClick={() => buscarPorCodigo(casa.codigoCasa)}>
+                <div className="image-button" role="button" tabIndex="0" onClick={() => buscarPorCodigo(casa.codigoCasa)}>
                   <img
                     src={imagenCasa(casa, index)}
                     alt={casa.nombrePropiedad}
@@ -483,11 +612,20 @@ export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin, onAu
                   />
                   <span className="badge">Disponible</span>
                   <span className="badge badge-yellow">Rural</span>
+                  <button
+                    className={`favorite-button ${favoritosIds.has(casa.codigoCasa) ? 'active' : ''}`}
+                    type="button"
+                    onClick={(event) => alternarFavorito(casa, event)}
+                    aria-label={favoritosIds.has(casa.codigoCasa) ? 'Quitar de favoritos' : 'Agregar a favoritos'}
+                    title={favoritosIds.has(casa.codigoCasa) ? 'Quitar de favoritos' : 'Agregar a favoritos'}
+                  >
+                    ♥
+                  </button>
                   <span className="preview-meta">
                     <span>{casa.poblacion}</span>
                     <span>Código {casa.codigoCasa}</span>
                   </span>
-                </button>
+                </div>
                 <div className="property-body">
                   <p className="location">{casa.poblacion}</p>
                   <h3>{casa.nombrePropiedad}</h3>
@@ -532,7 +670,16 @@ export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin, onAu
             />
             <div className="detail-content">
               <p className="location">{detalle.poblacion}</p>
-              <h2>{detalle.nombrePropiedad}</h2>
+              <div className="detail-title-row">
+                <h2>{detalle.nombrePropiedad}</h2>
+                <button
+                  className={`favorite-detail-button ${favoritosIds.has(detalle.codigoCasa) ? 'active' : ''}`}
+                  type="button"
+                  onClick={(event) => alternarFavorito(detalle, event)}
+                >
+                  {favoritosIds.has(detalle.codigoCasa) ? '♥ Favorita' : '♡ Guardar'}
+                </button>
+              </div>
               <p>{detalle.descripcionGeneral || 'Casa rural con espacios completos para descansar.'}</p>
               <div className="detail-specs">
                 <span>{detalle.numDormitorios} habitaciones</span>
@@ -613,6 +760,65 @@ export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin, onAu
                   )}
                 </section>
               </div>
+
+              <section className="reviews-section">
+                <div className="reviews-header">
+                  <div>
+                    <h3>Valoraciones</h3>
+                    <p>
+                      {valoraciones.total > 0
+                        ? `${valoraciones.promedio.toFixed(1)} de 5 · ${valoraciones.total} comentario${valoraciones.total === 1 ? '' : 's'}`
+                        : 'Aún no hay valoraciones para esta casa'}
+                    </p>
+                  </div>
+                  <span className="review-stars">{estrellasTexto(Math.round(valoraciones.promedio))}</span>
+                </div>
+
+                {esCliente ? (
+                  <form className="review-form" onSubmit={enviarValoracion}>
+                    <div className="rating-picker" aria-label="Seleccionar estrellas">
+                      {[1, 2, 3, 4, 5].map((estrella) => (
+                        <button
+                          key={estrella}
+                          type="button"
+                          className={Number(valoracionForm.estrellas) >= estrella ? 'selected' : ''}
+                          onClick={() => setValoracionForm((actual) => ({ ...actual, estrellas: estrella }))}
+                          aria-label={`${estrella} estrellas`}
+                        >
+                          ★
+                        </button>
+                      ))}
+                    </div>
+                    <textarea
+                      value={valoracionForm.comentario}
+                      maxLength="600"
+                      placeholder="Comparte cómo fue tu experiencia con esta casa"
+                      onChange={(event) => setValoracionForm((actual) => ({ ...actual, comentario: event.target.value }))}
+                    />
+                    <button type="submit" disabled={guardandoValoracion}>
+                      {guardandoValoracion ? 'Publicando...' : 'Publicar valoración'}
+                    </button>
+                  </form>
+                ) : (
+                  <p className="review-login-hint">Inicia sesión como cliente para dejar estrellas y comentario.</p>
+                )}
+
+                <div className="reviews-list">
+                  {valoracionesDetalle.length > 0 ? (
+                    valoracionesDetalle.map((valoracion) => (
+                      <article className="review-item" key={valoracion.idValoracion}>
+                        <div>
+                          <strong>{valoracion.cliente}</strong>
+                          <span>{estrellasTexto(valoracion.estrellas)}</span>
+                        </div>
+                        <p>{valoracion.comentario || 'Sin comentario adicional.'}</p>
+                      </article>
+                    ))
+                  ) : (
+                    <p className="detail-empty">Sé el primero en valorar esta casa.</p>
+                  )}
+                </div>
+              </section>
               <p className="owner">Teléfono: {detalle.telefonoPropietario}</p>
               <button 
                 className="btn-primary-action" 
