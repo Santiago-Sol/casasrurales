@@ -88,7 +88,7 @@ export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin, onAu
     const filtros = []
     if (termino.trim()) filtros.push(termino.trim())
     if (fechaEntrada && fechaSalida) filtros.push(`${fechaEntrada} a ${fechaSalida}`)
-    if (habitaciones) filtros.push(`${habitaciones} habitacion${Number(habitaciones) === 1 ? '' : 'es'}`)
+    if (habitaciones) filtros.push(`${habitaciones} habitación${Number(habitaciones) === 1 ? '' : 'es'}`)
     return filtros.length ? filtros.join(' - ') : 'Todas las casas disponibles'
   }
 
@@ -222,7 +222,7 @@ export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin, onAu
     const codigoNormalizado = String(codigo).trim()
 
     if (!codigoNormalizado) {
-      mostrarMensaje('Ingresa el codigo de la casa', 'info')
+      mostrarMensaje('Ingresa el código de la casa', 'info')
       return
     }
 
@@ -236,7 +236,7 @@ export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin, onAu
       })
 
       if (response.status === 404) {
-        mostrarMensaje('No encontramos una casa con ese codigo', 'info')
+        mostrarMensaje('No encontramos una casa con ese código', 'info')
         return
       }
 
@@ -341,10 +341,10 @@ export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin, onAu
 
           <form className="hero-search" onSubmit={handleBuscar}>
             <label className="search-field search-field-wide">
-              <span>Destino o codigo</span>
+              <span>Destino o código</span>
               <input
                 type="text"
-                placeholder="Poblacion o codigo de casa"
+                placeholder="Población o código de casa"
                 value={termino}
                 onChange={(event) => setTermino(event.target.value)}
               />
@@ -401,7 +401,7 @@ export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin, onAu
       <section className="catalog-layout">
         <section className="results-panel">
           <div className="credit-strip">
-            <strong>Tu proxima escapada rural empieza aqui</strong>
+            <strong>Tu próxima escapada rural empieza aquí</strong>
             <span>{descripcionFiltros()}</span>
           </div>
 
@@ -412,7 +412,7 @@ export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin, onAu
             <select aria-label="Ordenar resultados">
               <option>Ordenar por recomendadas</option>
               <option>Nombre A-Z</option>
-              <option>Mas habitaciones</option>
+              <option>Más habitaciones</option>
             </select>
           </div>
 
@@ -425,7 +425,7 @@ export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin, onAu
                   <span className="badge badge-yellow">Rural</span>
                   <span className="preview-meta">
                     <span>{casa.poblacion}</span>
-                    <span>Codigo {casa.codigoCasa}</span>
+                    <span>Código {casa.codigoCasa}</span>
                   </span>
                 </button>
                 <div className="property-body">
@@ -434,7 +434,7 @@ export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin, onAu
                   <p className="description">{casa.descripcionGeneral || 'Casa rural lista para una estadia tranquila.'}</p>
                   <div className="spec-row">
                     <span>{casa.numDormitorios} hab.</span>
-                    <span>{casa.numBanos} banos</span>
+                    <span>{casa.numBanos} baños</span>
                     <span>{casa.numCocinas} cocina</span>
                   </div>
                   <button className="contact-button" onClick={() => buscarPorCodigo(casa.codigoCasa)}>
@@ -451,7 +451,7 @@ export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin, onAu
                 Anterior
               </button>
               <span>
-                Pagina {paginaActual + 1} de {totalPaginas} · {totalResultados} casas
+                Página {paginaActual + 1} de {totalPaginas} · {totalResultados} casas
               </span>
               <button type="button" onClick={() => irAPagina(paginaActual + 1)} disabled={paginaActual >= totalPaginas - 1 || cargando}>
                 Siguiente
@@ -472,11 +472,11 @@ export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin, onAu
               <p>{detalle.descripcionGeneral || 'Casa rural con espacios completos para descansar.'}</p>
               <div className="detail-specs">
                 <span>{detalle.numDormitorios} habitaciones</span>
-                <span>{detalle.numBanos} banos</span>
+                <span>{detalle.numBanos} baños</span>
                 <span>{detalle.numCocinas} cocinas</span>
                 <span>{detalle.numPlazasGaraje} garajes</span>
               </div>
-              <p className="owner">Telefono: {detalle.telefonoPropietario}</p>
+              <p className="owner">Teléfono: {detalle.telefonoPropietario}</p>
               <button 
                 className="btn-primary-action" 
                 style={{ marginTop: '20px', width: '100%' }}

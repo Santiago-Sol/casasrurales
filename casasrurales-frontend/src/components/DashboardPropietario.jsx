@@ -549,7 +549,7 @@ export default function DashboardPropietario() {
                 </div>
 
                 <div className="campo-formulario">
-                  <label htmlFor="numBanos">Banos</label>
+                  <label htmlFor="numBanos">Baños</label>
                   <input
                     id="numBanos"
                     name="numBanos"
@@ -743,7 +743,7 @@ export default function DashboardPropietario() {
               </div>
               {modoFormulario === 'editar' && (
                 <p className="advertencia">
-                  La cantidad de habitaciones, banos y cocinas se define al crear la casa.
+                  La cantidad de habitaciones, baños y cocinas se define al crear la casa.
                 </p>
               )}
               {modoFormulario === 'crear' && (
