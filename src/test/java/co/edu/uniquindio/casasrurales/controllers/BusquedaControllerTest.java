@@ -44,6 +44,23 @@ class BusquedaControllerTest {
         busquedaController = new BusquedaController(busquedaCasasService, sistemaReservas);
     }
 
+    @DisplayName("Inicio: GET /api/busqueda retorna todas las casas disponibles")
+    @Test
+    void testListarDisponibles_OK() {
+        CasaRuralListadoDTO casa = new CasaRuralListadoDTO(
+                1, "Casa hermosa", "Armenia", 3, 2, 1, 6, "Casa hermosa", "Juan");
+        when(busquedaCasasService.buscarCasasDisponibles(null, null, null, null))
+                .thenReturn(List.of(casa));
+
+        ResponseEntity<List<CasaRuralListadoDTO>> respuesta = busquedaController.listarDisponibles(
+                null, null, null, null);
+
+        assertEquals(HttpStatus.OK, respuesta.getStatusCode());
+        assertNotNull(respuesta.getBody());
+        assertEquals(1, respuesta.getBody().size());
+        verify(busquedaCasasService, times(1)).buscarCasasDisponibles(null, null, null, null);
+    }
+
     @DisplayName("HU6-C01: GET /api/busqueda/por-poblacion retorna lista de casas")
     @Test
     void testBuscarPorPoblacion_OK() {

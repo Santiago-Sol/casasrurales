@@ -43,6 +43,26 @@ public class BusquedaController {
      * @param poblacion nombre de la población a buscar
      * @return lista de casas disponibles en esa población
      */
+    /**
+     * Lista todas las casas disponibles y permite filtrar por poblacion, fechas y huespedes.
+     */
+    @GetMapping
+    public ResponseEntity<List<CasaRuralListadoDTO>> listarDisponibles(
+            @RequestParam(required = false) String poblacion,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") Date fechaEntrada,
+            @RequestParam(required = false) Integer numeroNoches,
+            @RequestParam(required = false) Integer huespedes) {
+
+        List<CasaRuralListadoDTO> casas = busquedaCasasService.buscarCasasDisponibles(
+                poblacion, fechaEntrada, numeroNoches, huespedes);
+
+        if (casas.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+        }
+
+        return ResponseEntity.ok(casas);
+    }
+
     @GetMapping("/por-poblacion")
     public ResponseEntity<List<CasaRuralListadoDTO>> buscarPorPoblacion(
             @RequestParam String poblacion) {

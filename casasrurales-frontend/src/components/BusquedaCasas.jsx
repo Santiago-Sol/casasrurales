@@ -11,23 +11,29 @@ const imagenesCasas = [
 ]
 
 export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin, onAuthExpired }) {
-  const [tipoBusqueda, setTipoBusqueda] = useState('poblacion')
-  const [termino, setTermino] = useState('Armenia')
+  const [termino, setTermino] = useState('')
+  const [fechaEntrada, setFechaEntrada] = useState('')
+  const [fechaSalida, setFechaSalida] = useState('')
+  const [habitaciones, setHabitaciones] = useState('')
   const [resultados, setResultados] = useState([])
   const [detalle, setDetalle] = useState(null)
   const [cargando, setCargando] = useState(false)
   const [mensaje, setMensaje] = useState('')
   const [tipoMensaje, setTipoMensaje] = useState('info')
-  const [soloCasas, setSoloCasas] = useState(true)
   const [casaReservando, setCasaReservando] = useState(null)
 
   const casasOrdenadas = useMemo(
-    () => [...resultados].sort((a, b) => a.nombrePropiedad.localeCompare(b.nombrePropiedad)),
-    [resultados]
+    () => {
+      const habitacionesMinimas = Number(habitaciones) || 0
+      return [...resultados]
+        .filter((casa) => !habitacionesMinimas || casa.numDormitorios >= habitacionesMinimas)
+        .sort((a, b) => a.nombrePropiedad.localeCompare(b.nombrePropiedad))
+    },
+    [resultados, habitaciones]
   )
 
   useEffect(() => {
-    buscarPorPoblacion('Armenia')
+    cargarCasasDisponibles(true)
   }, [])
 
   const mostrarMensaje = (texto, tipo = 'info') => {
@@ -41,10 +47,34 @@ export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin, onAu
     setDetalle(null)
   }
 
-  const buscarPorPoblacion = async (valor = termino) => {
-    const poblacion = valor.trim()
-    if (!poblacion) {
-      mostrarMensaje('Ingresa una poblacion para buscar casas', 'info')
+  const calcularNoches = () => {
+    if (!fechaEntrada || !fechaSalida) return 0
+    const entrada = new Date(`${fechaEntrada}T00:00:00`)
+    const salida = new Date(`${fechaSalida}T00:00:00`)
+    const noches = Math.round((salida - entrada) / (1000 * 60 * 60 * 24))
+    return noches > 0 ? noches : 0
+  }
+
+  const descripcionFiltros = () => {
+    const filtros = []
+    if (termino.trim()) filtros.push(termino.trim())
+    if (fechaEntrada && fechaSalida) filtros.push(`${fechaEntrada} a ${fechaSalida}`)
+    if (habitaciones) filtros.push(`${habitaciones} habitacion${Number(habitaciones) === 1 ? '' : 'es'}`)
+    return filtros.length ? filtros.join(' - ') : 'Todas las casas disponibles'
+  }
+
+  const cargarCasasDisponibles = async (silencioso = false) => {
+    const poblacionOCodigo = termino.trim()
+    const esCodigo = /^\d+$/.test(poblacionOCodigo)
+    const noches = calcularNoches()
+
+    if ((fechaEntrada || fechaSalida) && noches === 0) {
+      mostrarMensaje('Selecciona una fecha de salida posterior a la entrada', 'info')
+      return
+    }
+
+    if (esCodigo) {
+      buscarPorCodigoComoResultado(poblacionOCodigo)
       return
     }
 
@@ -53,13 +83,19 @@ export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin, onAu
     limpiarVista()
 
     try {
-      const response = await fetch(
-        `/api/busqueda/por-poblacion?poblacion=${encodeURIComponent(poblacion)}`,
-        { credentials: 'include' }
-      )
+      const params = new URLSearchParams()
+      if (poblacionOCodigo) params.set('poblacion', poblacionOCodigo)
+      if (fechaEntrada && noches > 0) {
+        params.set('fechaEntrada', fechaEntrada)
+        params.set('numeroNoches', String(noches))
+      }
+      const query = params.toString()
+      const response = await fetch(`/api/busqueda${query ? `?${query}` : ''}`, {
+        credentials: 'include'
+      })
 
       if (response.status === 204) {
-        mostrarMensaje('No encontramos casas en esa poblacion', 'info')
+        mostrarMensaje('No encontramos casas con esos filtros', 'info')
         return
       }
 
@@ -70,7 +106,9 @@ export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin, onAu
 
       const data = await response.json()
       setResultados(data)
-      mostrarMensaje(`${data.length} casas rurales encontradas en ${poblacion}`, 'exito')
+      if (!silencioso) {
+        mostrarMensaje(`${data.length} casas rurales encontradas`, 'exito')
+      }
     } catch (error) {
       mostrarMensaje('Error de conexion con el servidor', 'error')
       console.error(error)
@@ -79,7 +117,35 @@ export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin, onAu
     }
   }
 
-  const buscarPorCodigo = async (codigo = termino) => {
+  const cargarTodasLasCasas = async () => {
+    setCargando(true)
+    setMensaje('')
+    limpiarVista()
+
+    try {
+      const response = await fetch('/api/busqueda', { credentials: 'include' })
+
+      if (response.status === 204) {
+        mostrarMensaje('No hay casas disponibles por ahora', 'info')
+        return
+      }
+
+      if (!response.ok) {
+        mostrarMensaje('No fue posible cargar las casas disponibles', 'error')
+        return
+      }
+
+      const data = await response.json()
+      setResultados(data)
+    } catch (error) {
+      mostrarMensaje('Error de conexion con el servidor', 'error')
+      console.error(error)
+    } finally {
+      setCargando(false)
+    }
+  }
+
+  const buscarPorCodigo = async (codigo = termino, abrirDetalle = true) => {
     const codigoNormalizado = String(codigo).trim()
 
     if (!codigoNormalizado) {
@@ -107,8 +173,11 @@ export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin, onAu
       }
 
       const data = await response.json()
-      setDetalle(data)
-      mostrarMensaje('Detalle cargado', 'exito')
+      if (abrirDetalle) {
+        setDetalle(data)
+        mostrarMensaje('Detalle cargado', 'exito')
+      }
+      return data
     } catch (error) {
       mostrarMensaje('Error de conexion con el servidor', 'error')
       console.error(error)
@@ -117,20 +186,56 @@ export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin, onAu
     }
   }
 
-  const handleBuscar = () => {
-    if (tipoBusqueda === 'poblacion') {
-      buscarPorPoblacion()
+  const consultarDisponibilidadCasa = async (casa) => {
+    const noches = calcularNoches()
+    if (!fechaEntrada || noches === 0) return true
+
+    const params = new URLSearchParams({
+      fechaEntrada,
+      numeroNoches: String(noches)
+    })
+    const response = await fetch(`/api/busqueda/${casa.codigoCasa}/disponibilidad?${params.toString()}`, {
+      credentials: 'include'
+    })
+
+    if (!response.ok) return false
+
+    const disponibilidad = await response.json()
+    const dias = disponibilidad.dias || []
+    return dias.every((dia) => dia.estadoCasaEntera === 'LIBRE')
+  }
+
+  const buscarPorCodigoComoResultado = async (codigo) => {
+    limpiarVista()
+    const casa = await buscarPorCodigo(codigo, false)
+    if (!casa) return
+
+    const cumpleHabitaciones = !habitaciones || casa.numDormitorios >= Number(habitaciones)
+    const cumpleDisponibilidad = await consultarDisponibilidadCasa(casa)
+
+    if (!cumpleHabitaciones || !cumpleDisponibilidad) {
+      setResultados([])
+      mostrarMensaje('La casa existe, pero no cumple los filtros seleccionados', 'info')
       return
     }
 
-    buscarPorCodigo()
+    setResultados([casa])
+    setDetalle(null)
+    mostrarMensaje('Casa encontrada', 'exito')
   }
 
-  const cambiarTipoBusqueda = (value) => {
-    setTipoBusqueda(value)
-    setTermino(value === 'poblacion' ? 'Armenia' : '')
-    limpiarVista()
+  const handleBuscar = (event) => {
+    event?.preventDefault()
+    cargarCasasDisponibles()
+  }
+
+  const limpiarFiltros = () => {
+    setTermino('')
+    setFechaEntrada('')
+    setFechaSalida('')
+    setHabitaciones('')
     setMensaje('')
+    cargarTodasLasCasas()
   }
 
   const imagenCasa = (casa, index = 0) => {
@@ -141,76 +246,74 @@ export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin, onAu
   return (
     <main className="catalog-page">
       <section className="catalog-hero">
-        <div>
-          <p className="breadcrumb">Inicio / Casas rurales / Quindio</p>
-          <h1>Casas rurales en Armenia</h1>
-          <p className="hero-copy">
-            Encuentra estadias tranquilas, verdes y listas para reservar cerca del paisaje cafetero.
-          </p>
-        </div>
+        <div className="hero-content">
+          <h1>Casas rurales disponibles</h1>
+          <p className="hero-copy">Encuentra las casas rurales que van mas contigo</p>
 
+          <form className="hero-search" onSubmit={handleBuscar}>
+            <label className="search-field search-field-wide">
+              <span>Destino o codigo</span>
+              <input
+                type="text"
+                placeholder="Poblacion o codigo de casa"
+                value={termino}
+                onChange={(event) => setTermino(event.target.value)}
+              />
+              {termino && (
+                <button className="clear-field" type="button" onClick={() => setTermino('')}>
+                  x
+                </button>
+              )}
+            </label>
+
+            <label className="search-field">
+              <span>Entrada</span>
+              <input
+                type="date"
+                value={fechaEntrada}
+                onChange={(event) => setFechaEntrada(event.target.value)}
+              />
+            </label>
+
+            <label className="search-field">
+              <span>Salida</span>
+              <input
+                type="date"
+                min={fechaEntrada || undefined}
+                value={fechaSalida}
+                onChange={(event) => setFechaSalida(event.target.value)}
+              />
+            </label>
+
+            <label className="search-field search-field-compact">
+              <span>Hab.</span>
+              <input
+                type="number"
+                min="1"
+                placeholder="Todas"
+                value={habitaciones}
+                onChange={(event) => setHabitaciones(event.target.value)}
+              />
+            </label>
+
+            <button className="hero-search-button" type="submit" disabled={cargando}>
+              {cargando ? 'Buscando...' : 'Buscar'}
+            </button>
+          </form>
+
+          <div className="hero-options">
+            <button className="reset-search" type="button" onClick={limpiarFiltros}>
+              Ver todas
+            </button>
+          </div>
+        </div>
       </section>
 
       <section className="catalog-layout">
-        <aside className="filters-panel">
-          <div className="filter-block">
-            <h2>Ubicacion y tipo</h2>
-            <input
-              type={tipoBusqueda === 'codigo' ? 'number' : 'text'}
-              placeholder={tipoBusqueda === 'poblacion' ? 'Armenia' : 'Codigo de casa'}
-              value={termino}
-              onChange={(event) => setTermino(event.target.value)}
-              onKeyDown={(event) => event.key === 'Enter' && handleBuscar()}
-            />
-          </div>
-
-          <div className="filter-block">
-            <h3>Buscar por</h3>
-            <div className="segmented-control">
-              <button
-                className={tipoBusqueda === 'poblacion' ? 'selected' : ''}
-                onClick={() => cambiarTipoBusqueda('poblacion')}
-              >
-                Poblacion
-              </button>
-              <button
-                className={tipoBusqueda === 'codigo' ? 'selected' : ''}
-                onClick={() => cambiarTipoBusqueda('codigo')}
-              >
-                Codigo
-              </button>
-            </div>
-          </div>
-
-          <div className="filter-block">
-            <h3>Oferta</h3>
-            <div className="offer-grid">
-              <button>Arrendar</button>
-              <button className="active">Reservar</button>
-            </div>
-          </div>
-
-          <div className="filter-block">
-            <h3>Tipo de inmueble</h3>
-            <label className="check-row">
-              <span>Casa rural</span>
-              <input
-                type="checkbox"
-                checked={soloCasas}
-                onChange={(event) => setSoloCasas(event.target.checked)}
-              />
-            </label>
-          </div>
-
-          <button className="search-button" onClick={handleBuscar} disabled={cargando}>
-            {cargando ? 'Buscando...' : 'Buscar casas'}
-          </button>
-        </aside>
-
         <section className="results-panel">
           <div className="credit-strip">
-            <strong>Escapadas verdes en el Quindio</strong>
-            <span>Casas con espacios familiares, cocina y zonas para descansar.</span>
+            <strong>Tu proxima escapada rural empieza aqui</strong>
+            <span>{descripcionFiltros()}</span>
           </div>
 
           {mensaje && <div className={`mensaje ${tipoMensaje}`}>{mensaje}</div>}
@@ -237,6 +340,7 @@ export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin, onAu
                   <h3>{casa.nombrePropiedad}</h3>
                   <p className="description">{casa.descripcionGeneral || 'Casa rural lista para una estadia tranquila.'}</p>
                   <div className="spec-row">
+                    <span>Codigo {casa.codigoCasa}</span>
                     <span>{casa.numDormitorios} hab.</span>
                     <span>{casa.numBanos} banos</span>
                     <span>{casa.numCocinas} cocina</span>

@@ -12,11 +12,19 @@ public class CasaRuralListadoDTO {
     private int numDormitorios;
     private int numBanos;
     private int numCocinas;
+    private int capacidadHuespedes;
     private String descripcionGeneral;
     private String nombrePropietario;
 
     public CasaRuralListadoDTO(int codigoCasa, String nombrePropiedad, String poblacion, int numDormitorios,
                               int numBanos, int numCocinas, String descripcionGeneral,
+                              String nombrePropietario) {
+        this(codigoCasa, nombrePropiedad, poblacion, numDormitorios, numBanos, numCocinas,
+                numDormitorios, descripcionGeneral, nombrePropietario);
+    }
+
+    public CasaRuralListadoDTO(int codigoCasa, String nombrePropiedad, String poblacion, int numDormitorios,
+                              int numBanos, int numCocinas, int capacidadHuespedes, String descripcionGeneral,
                               String nombrePropietario) {
         this.codigoCasa = codigoCasa;
         this.nombrePropiedad = nombrePropiedad;
@@ -24,6 +32,7 @@ public class CasaRuralListadoDTO {
         this.numDormitorios = numDormitorios;
         this.numBanos = numBanos;
         this.numCocinas = numCocinas;
+        this.capacidadHuespedes = capacidadHuespedes;
         this.descripcionGeneral = descripcionGeneral;
         this.nombrePropietario = nombrePropietario;
     }
@@ -51,6 +60,10 @@ public class CasaRuralListadoDTO {
 
     public int getNumCocinas() {
         return numCocinas;
+    }
+
+    public int getCapacidadHuespedes() {
+        return capacidadHuespedes;
     }
 
     public String getDescripcionGeneral() {

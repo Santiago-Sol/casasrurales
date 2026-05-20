@@ -1,8 +1,10 @@
 package co.edu.uniquindio.casasrurales.services;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
@@ -11,12 +13,15 @@ import co.edu.uniquindio.casasrurales.dto.BanoDetalleDTO;
 import co.edu.uniquindio.casasrurales.dto.CasaRuralDetalleDTO;
 import co.edu.uniquindio.casasrurales.dto.CasaRuralListadoDTO;
 import co.edu.uniquindio.casasrurales.dto.CocinaDetalleDTO;
+import co.edu.uniquindio.casasrurales.dto.DisponibilidadCasaDTO;
+import co.edu.uniquindio.casasrurales.dto.DisponibilidadDiaDTO;
 import co.edu.uniquindio.casasrurales.dto.HabitacionDetalleDTO;
 import co.edu.uniquindio.casasrurales.entities.Bano;
 import co.edu.uniquindio.casasrurales.entities.CasaRural;
 import co.edu.uniquindio.casasrurales.entities.Cocina;
 import co.edu.uniquindio.casasrurales.entities.Foto;
 import co.edu.uniquindio.casasrurales.entities.Habitacion;
+import co.edu.uniquindio.casasrurales.enums.EstadoDisponibilidad;
 import co.edu.uniquindio.casasrurales.repositories.BanoRepository;
 import co.edu.uniquindio.casasrurales.repositories.CasaRuralRepository;
 import co.edu.uniquindio.casasrurales.repositories.CocinaRepository;
@@ -38,17 +43,20 @@ public class BusquedaCasasService {
     private final CocinaRepository cocinaRepository;
     private final BanoRepository banoRepository;
     private final FotoRepository fotoRepository;
+    private final SistemaReservas sistemaReservas;
 
     public BusquedaCasasService(CasaRuralRepository casaRuralRepository,
                                HabitacionRepository habitacionRepository,
                                CocinaRepository cocinaRepository,
                                BanoRepository banoRepository,
-                               FotoRepository fotoRepository) {
+                               FotoRepository fotoRepository,
+                               SistemaReservas sistemaReservas) {
         this.casaRuralRepository = casaRuralRepository;
         this.habitacionRepository = habitacionRepository;
         this.cocinaRepository = cocinaRepository;
         this.banoRepository = banoRepository;
         this.fotoRepository = fotoRepository;
+        this.sistemaReservas = sistemaReservas;
     }
 
     /**
@@ -67,6 +75,28 @@ public class BusquedaCasasService {
         return casas.stream()
                 .filter(CasaRural::isActiva)
                 .filter(casa -> casa.getPaquetesAlquiler().stream().anyMatch(paquete -> paquete.isDisponible()))
+                .map(this::convertirACasaListadoDTO)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Lista casas activas con paquetes disponibles, aplicando filtros opcionales.
+     */
+    public List<CasaRuralListadoDTO> buscarCasasDisponibles(String poblacion, Date fechaEntrada,
+                                                            Integer numeroNoches, Integer huespedes) {
+        List<CasaRural> casas = casaRuralRepository.findByActivaTrue();
+        String poblacionNormalizada = poblacion == null ? "" : poblacion.trim();
+        int huespedesSolicitados = huespedes == null ? 0 : Math.max(0, huespedes);
+        int nochesSolicitadas = numeroNoches == null ? 0 : numeroNoches;
+        boolean filtrarPorFechas = fechaEntrada != null && nochesSolicitadas > 0;
+
+        return casas.stream()
+                .filter(casa -> casa.getPaquetesAlquiler().stream().anyMatch(paquete -> paquete.isDisponible()))
+                .filter(casa -> poblacionNormalizada.isEmpty()
+                        || casa.getPoblacion().equalsIgnoreCase(poblacionNormalizada))
+                .filter(casa -> huespedesSolicitados == 0 || capacidadHuespedes(casa) >= huespedesSolicitados)
+                .filter(casa -> !filtrarPorFechas
+                        || estaDisponible(casa, fechaEntrada, nochesSolicitadas, huespedesSolicitados))
                 .map(this::convertirACasaListadoDTO)
                 .collect(Collectors.toList());
     }
@@ -140,6 +170,7 @@ public class BusquedaCasasService {
         int numDormitorios = (int) casa.getHabitaciones().size();
         int numBanos = (int) casa.getBanos().size();
         int numCocinas = (int) casa.getCocinas().size();
+        int capacidadHuespedes = capacidadHuespedes(casa);
         
         return new CasaRuralListadoDTO(
                 casa.getCodigoCasa(),
@@ -148,6 +179,7 @@ public class BusquedaCasasService {
                 numDormitorios,
                 numBanos,
                 numCocinas,
+                capacidadHuespedes,
                 casa.getDescripcionGeneral(),
                 casa.getPropietario().getNombreCuenta()
         );
@@ -210,5 +242,53 @@ public class BusquedaCasasService {
         detalle.setUrlsFotos(urlsFotos);
 
         return detalle;
+    }
+
+    private int capacidadHuespedes(CasaRural casa) {
+        int camas = casa.getHabitaciones().stream()
+                .mapToInt(Habitacion::getNumeroCamas)
+                .sum();
+        return Math.max(camas, casa.getHabitaciones().size());
+    }
+
+    private boolean estaDisponible(CasaRural casa, Date fechaEntrada, int numeroNoches, int huespedes) {
+        try {
+            DisponibilidadCasaDTO disponibilidad = sistemaReservas.consultarDisponibilidadDetallada(
+                    casa.getCodigoCasa(), fechaEntrada, numeroNoches);
+            if (disponibilidad.getDias().stream()
+                    .allMatch(dia -> dia.getEstadoCasaEntera() == EstadoDisponibilidad.LIBRE)) {
+                return true;
+            }
+            if (huespedes <= 0) {
+                return false;
+            }
+            return capacidadHabitacionesLibresTodoElPeriodo(casa, disponibilidad) >= huespedes;
+        } catch (IllegalArgumentException | NullPointerException ex) {
+            return false;
+        }
+    }
+
+    private int capacidadHabitacionesLibresTodoElPeriodo(CasaRural casa, DisponibilidadCasaDTO disponibilidad) {
+        if (disponibilidad.getDias() == null || disponibilidad.getDias().isEmpty()) {
+            return 0;
+        }
+
+        Set<Integer> idsLibres = disponibilidad.getDias().get(0).getHabitaciones().stream()
+                .filter(habitacion -> habitacion.getEstado() == EstadoDisponibilidad.LIBRE)
+                .map(habitacion -> habitacion.getIdHabitacion())
+                .collect(Collectors.toSet());
+
+        for (DisponibilidadDiaDTO dia : disponibilidad.getDias().subList(1, disponibilidad.getDias().size())) {
+            Set<Integer> libresDelDia = dia.getHabitaciones().stream()
+                    .filter(habitacion -> habitacion.getEstado() == EstadoDisponibilidad.LIBRE)
+                    .map(habitacion -> habitacion.getIdHabitacion())
+                    .collect(Collectors.toSet());
+            idsLibres.retainAll(libresDelDia);
+        }
+
+        return casa.getHabitaciones().stream()
+                .filter(habitacion -> idsLibres.contains(habitacion.getIdHabitacion()))
+                .mapToInt(Habitacion::getNumeroCamas)
+                .sum();
     }
 }

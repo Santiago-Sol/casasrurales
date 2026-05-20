@@ -55,6 +55,9 @@ class BusquedaCasasServiceTest {
     @Mock
     private FotoRepository fotoRepository;
 
+    @Mock
+    private SistemaReservas sistemaReservas;
+
     @InjectMocks
     private BusquedaCasasService busquedaCasasService;
 
@@ -97,6 +100,36 @@ class BusquedaCasasServiceTest {
         assertEquals(1, resultado.size());
         assertEquals(1, resultado.get(0).getCodigoCasa());
         verify(casaRuralRepository, times(1)).findByPoblacionIgnoreCase(anyString());
+    }
+
+    @DisplayName("Inicio: listar disponibles retorna casas activas con paquetes")
+    @Test
+    void buscarCasasDisponiblesSinFiltros() {
+        Propietario propietario = new Propietario("3001234567", "dueno", "secret123", "123456");
+
+        CasaRural casaDisponible = new CasaRural(1, "Armenia", "Casa Verde", "Disponible", 1, 1, true);
+        casaDisponible.setPropietario(propietario);
+        casaDisponible.agregarHabitacion(new Habitacion("HAB-1", 2, TipoCama.DOBLE, true));
+        casaDisponible.agregarPaqueteAlquiler(new PaqueteAlquiler(
+                java.sql.Date.valueOf("2026-06-01"),
+                java.sql.Date.valueOf("2026-06-05"),
+                ModalidadAlquiler.AMBAS,
+                450000,
+                90000,
+                true
+        ));
+
+        CasaRural casaSinPaquete = new CasaRural(2, "Salento", "Casa Gris", "Sin paquete", 1, 1, true);
+        casaSinPaquete.setPropietario(propietario);
+
+        when(casaRuralRepository.findByActivaTrue()).thenReturn(List.of(casaDisponible, casaSinPaquete));
+
+        List<CasaRuralListadoDTO> resultado = busquedaCasasService.buscarCasasDisponibles(null, null, null, null);
+
+        assertEquals(1, resultado.size());
+        assertEquals(1, resultado.get(0).getCodigoCasa());
+        assertEquals(2, resultado.get(0).getCapacidadHuespedes());
+        verify(casaRuralRepository, times(1)).findByActivaTrue();
     }
 
     @DisplayName("HU6-002: Buscar casas retorna resultado vacio si no hay coincidencias")
