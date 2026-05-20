@@ -10,7 +10,9 @@ const imagenesCasas = [
 
 export default function FavoritosCliente({ onVerCasas }) {
   const [favoritos, setFavoritos] = useState([])
+  const [detalle, setDetalle] = useState(null)
   const [cargando, setCargando] = useState(true)
+  const [cargandoDetalle, setCargandoDetalle] = useState(false)
   const [mensaje, setMensaje] = useState('')
 
   useEffect(() => {
@@ -48,7 +50,7 @@ export default function FavoritosCliente({ onVerCasas }) {
       const data = await response.json()
       setFavoritos(Array.isArray(data) ? data : [])
     } catch (error) {
-      setMensaje('Error de conexión al cargar favoritos')
+      setMensaje('Error de conexion al cargar favoritos')
       console.error(error)
     } finally {
       setCargando(false)
@@ -68,11 +70,54 @@ export default function FavoritosCliente({ onVerCasas }) {
       }
 
       setFavoritos((actuales) => actuales.filter((casa) => casa.codigoCasa !== codigoCasa))
+      if (detalle?.codigoCasa === codigoCasa) {
+        setDetalle(null)
+      }
     } catch (error) {
-      setMensaje('Error de conexión con favoritos')
+      setMensaje('Error de conexion con favoritos')
       console.error(error)
     }
   }
+
+  const verDetalle = async (codigoCasa) => {
+    setCargandoDetalle(true)
+    setMensaje('')
+    try {
+      const response = await fetch(`/api/busqueda/${codigoCasa}`, {
+        credentials: 'include'
+      })
+
+      if (response.status === 404) {
+        setMensaje('No encontramos el detalle de esta casa')
+        return
+      }
+
+      if (!response.ok) {
+        setMensaje('No fue posible cargar el detalle de la casa')
+        return
+      }
+
+      const data = await response.json()
+      setDetalle(data)
+    } catch (error) {
+      setMensaje('Error de conexion al cargar el detalle')
+      console.error(error)
+    } finally {
+      setCargandoDetalle(false)
+    }
+  }
+
+  const formatearEnum = (valor) => {
+    if (!valor) return 'Sin especificar'
+    return String(valor)
+      .toLowerCase()
+      .replaceAll('_', ' ')
+      .replace(/\b\w/g, (letra) => letra.toUpperCase())
+  }
+
+  const habitacionesDetalle = Array.isArray(detalle?.habitaciones) ? detalle.habitaciones : []
+  const cocinasDetalle = Array.isArray(detalle?.cocinas) ? detalle.cocinas : []
+  const banosDetalle = Array.isArray(detalle?.banos) ? detalle.banos : []
 
   return (
     <section className="favorites-page">
@@ -89,8 +134,8 @@ export default function FavoritosCliente({ onVerCasas }) {
 
       {!cargando && favoritos.length === 0 ? (
         <div className="favorites-empty">
-          <h2>Aún no tienes casas favoritas</h2>
-          <p>Usa el corazón en las tarjetas para armar tu lista de próximas escapadas.</p>
+          <h2>Aun no tienes casas favoritas</h2>
+          <p>Usa el corazon en las tarjetas para armar tu lista de proximas escapadas.</p>
           <button type="button" onClick={onVerCasas}>Explorar casas</button>
         </div>
       ) : (
@@ -106,24 +151,137 @@ export default function FavoritosCliente({ onVerCasas }) {
                 <span className="badge">Favorita</span>
                 <span className="preview-meta">
                   <span>{casa.poblacion}</span>
-                  <span>Código {casa.codigoCasa}</span>
+                  <span>Codigo {casa.codigoCasa}</span>
                 </span>
               </div>
               <div className="property-body">
                 <p className="location">{casa.poblacion}</p>
                 <h3>{casa.nombrePropiedad}</h3>
-                <p className="description">{casa.descripcionGeneral || 'Casa rural lista para una estadía tranquila.'}</p>
+                <p className="description">{casa.descripcionGeneral || 'Casa rural lista para una estadia tranquila.'}</p>
                 <div className="spec-row">
                   <span>{casa.numDormitorios} hab.</span>
-                  <span>{casa.numBanos} baños</span>
+                  <span>{casa.numBanos} banos</span>
                   <span>{casa.numCocinas} cocina</span>
                 </div>
-                <button className="contact-button secondary-action" type="button" onClick={() => quitarFavorito(casa.codigoCasa)}>
-                  Quitar de favoritos
-                </button>
+                <div className="favorite-card-actions">
+                  <button
+                    className="contact-button"
+                    type="button"
+                    onClick={() => verDetalle(casa.codigoCasa)}
+                    disabled={cargandoDetalle}
+                  >
+                    {cargandoDetalle ? 'Cargando...' : 'Ver detalle'}
+                  </button>
+                  <button className="contact-button secondary-action" type="button" onClick={() => quitarFavorito(casa.codigoCasa)}>
+                    Quitar de favoritos
+                  </button>
+                </div>
               </div>
             </article>
           ))}
+        </div>
+      )}
+
+      {detalle && (
+        <div className="detail-overlay" onClick={() => setDetalle(null)}>
+          <section className="detail-modal" onClick={(event) => event.stopPropagation()}>
+            <button className="close-detail" onClick={() => setDetalle(null)}>x</button>
+            <img
+              src={imagenCasa(detalle)}
+              alt={detalle.nombrePropiedad}
+              onError={(event) => usarImagenAlterna(event)}
+            />
+            <div className="detail-content">
+              <p className="location">{detalle.poblacion}</p>
+              <div className="detail-title-row">
+                <h2>{detalle.nombrePropiedad}</h2>
+                <span className="favorite-detail-button active">Favorita</span>
+              </div>
+              <p>{detalle.descripcionGeneral || 'Casa rural con espacios completos para descansar.'}</p>
+              <div className="detail-specs">
+                <span>{detalle.numDormitorios} habitaciones</span>
+                <span>{detalle.numBanos} banos</span>
+                <span>{detalle.numCocinas} cocinas</span>
+                <span>{detalle.numPlazasGaraje} garajes</span>
+              </div>
+
+              <div className="detail-sections">
+                <section className="detail-section">
+                  <div className="detail-section-title">
+                    <h3>Habitaciones</h3>
+                    <span>{habitacionesDetalle.length}</span>
+                  </div>
+                  {habitacionesDetalle.length > 0 ? (
+                    <div className="detail-list">
+                      {habitacionesDetalle.map((habitacion, index) => (
+                        <article className="detail-item" key={habitacion.idHabitacion || habitacion.codigoHabitacion || index}>
+                          <div>
+                            <strong>Habitacion {habitacion.codigoHabitacion || index + 1}</strong>
+                            <p>
+                              {habitacion.numeroCamas} {habitacion.numeroCamas === 1 ? 'cama' : 'camas'} - {formatearEnum(habitacion.tipoCama)}
+                            </p>
+                          </div>
+                          <span className={`feature-pill ${habitacion.tieneBano ? 'feature-pill-ok' : ''}`}>
+                            {habitacion.tieneBano ? 'Con bano' : 'Sin bano'}
+                          </span>
+                        </article>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="detail-empty">No hay habitaciones detalladas para esta casa.</p>
+                  )}
+                </section>
+
+                <section className="detail-section">
+                  <div className="detail-section-title">
+                    <h3>Cocinas</h3>
+                    <span>{cocinasDetalle.length}</span>
+                  </div>
+                  {cocinasDetalle.length > 0 ? (
+                    <div className="detail-list">
+                      {cocinasDetalle.map((cocina, index) => (
+                        <article className="detail-item detail-item-stacked" key={`cocina-${index}`}>
+                          <strong>Cocina {index + 1}</strong>
+                          <div className="feature-row">
+                            <span className={`feature-pill ${cocina.tieneLavavajillas ? 'feature-pill-ok' : ''}`}>
+                              {cocina.tieneLavavajillas ? 'Lavavajillas' : 'Sin lavavajillas'}
+                            </span>
+                            <span className={`feature-pill ${cocina.tieneLavadora ? 'feature-pill-ok' : ''}`}>
+                              {cocina.tieneLavadora ? 'Lavadora' : 'Sin lavadora'}
+                            </span>
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="detail-empty">No hay cocinas detalladas para esta casa.</p>
+                  )}
+                </section>
+
+                <section className="detail-section detail-section-wide">
+                  <div className="detail-section-title">
+                    <h3>Banos</h3>
+                    <span>{banosDetalle.length}</span>
+                  </div>
+                  {banosDetalle.length > 0 ? (
+                    <div className="bath-list">
+                      {banosDetalle.map((bano, index) => (
+                        <article className="bath-item" key={`bano-${index}`}>
+                          <strong>Bano {index + 1}</strong>
+                          <p>{bano.observaciones || 'Sin observaciones adicionales.'}</p>
+                        </article>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="detail-empty">No hay banos detallados para esta casa.</p>
+                  )}
+                </section>
+              </div>
+
+              <p className="owner">Propietario: {detalle.nombrePropietario || 'No disponible'}</p>
+              <p className="owner">Telefono: {detalle.telefonoPropietario || 'No disponible'}</p>
+            </div>
+          </section>
         </div>
       )}
     </section>
