@@ -35,6 +35,8 @@ import co.edu.uniquindio.casasrurales.repositories.CasaRuralRepository;
 import co.edu.uniquindio.casasrurales.repositories.CocinaRepository;
 import co.edu.uniquindio.casasrurales.repositories.FotoRepository;
 import co.edu.uniquindio.casasrurales.repositories.HabitacionRepository;
+import co.edu.uniquindio.casasrurales.repositories.ValoracionRepository;
+import co.edu.uniquindio.casasrurales.repositories.CuentaRepository;
 
 @DisplayName("BusquedaCasasService - Pruebas Unitarias")
 @ExtendWith(MockitoExtension.class)
@@ -57,6 +59,12 @@ class BusquedaCasasServiceTest {
 
     @Mock
     private SistemaReservas sistemaReservas;
+
+    @Mock
+    private ValoracionRepository valoracionRepository;
+
+    @Mock
+    private CuentaRepository cuentaRepository;
 
     @InjectMocks
     private BusquedaCasasService busquedaCasasService;
@@ -213,6 +221,7 @@ class BusquedaCasasServiceTest {
         when(banoRepository.findByCasaRuralCodigoCasa(7)).thenReturn(List.of(bano));
         when(cocinaRepository.findByCasaRuralCodigoCasa(7)).thenReturn(List.of(cocina));
         when(fotoRepository.findByCasaRuralCodigoCasa(7)).thenReturn(List.of());
+        when(valoracionRepository.findByCasaRuralCodigoCasaOrderByFechaCreacionDesc(7)).thenReturn(List.of());
 
         CasaRuralDetalleDTO detalle = busquedaCasasService.obtenerDetalleCasa(7);
 

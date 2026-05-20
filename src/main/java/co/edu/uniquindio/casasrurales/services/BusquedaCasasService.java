@@ -28,6 +28,10 @@ import co.edu.uniquindio.casasrurales.repositories.CasaRuralRepository;
 import co.edu.uniquindio.casasrurales.repositories.CocinaRepository;
 import co.edu.uniquindio.casasrurales.repositories.FotoRepository;
 import co.edu.uniquindio.casasrurales.repositories.HabitacionRepository;
+import co.edu.uniquindio.casasrurales.repositories.ValoracionRepository;
+import co.edu.uniquindio.casasrurales.repositories.CuentaRepository;
+import co.edu.uniquindio.casasrurales.dto.ValoracionDTO;
+import co.edu.uniquindio.casasrurales.entities.Valoracion;
 import jakarta.transaction.Transactional;
 
 /**
@@ -45,19 +49,25 @@ public class BusquedaCasasService {
     private final BanoRepository banoRepository;
     private final FotoRepository fotoRepository;
     private final SistemaReservas sistemaReservas;
+    private final ValoracionRepository valoracionRepository;
+    private final CuentaRepository cuentaRepository;
 
     public BusquedaCasasService(CasaRuralRepository casaRuralRepository,
                                HabitacionRepository habitacionRepository,
                                CocinaRepository cocinaRepository,
                                BanoRepository banoRepository,
                                FotoRepository fotoRepository,
-                               SistemaReservas sistemaReservas) {
+                               SistemaReservas sistemaReservas,
+                               ValoracionRepository valoracionRepository,
+                               CuentaRepository cuentaRepository) {
         this.casaRuralRepository = casaRuralRepository;
         this.habitacionRepository = habitacionRepository;
         this.cocinaRepository = cocinaRepository;
         this.banoRepository = banoRepository;
         this.fotoRepository = fotoRepository;
         this.sistemaReservas = sistemaReservas;
+        this.valoracionRepository = valoracionRepository;
+        this.cuentaRepository = cuentaRepository;
     }
 
     /**
@@ -197,7 +207,7 @@ public class BusquedaCasasService {
     /**
      * Convierte una entidad CasaRural a CasaRuralListadoDTO.
      */
-    private CasaRuralListadoDTO convertirACasaListadoDTO(CasaRural casa) {
+    public CasaRuralListadoDTO convertirACasaListadoDTO(CasaRural casa) {
         int numDormitorios = (int) casa.getHabitaciones().size();
         int numBanos = (int) casa.getBanos().size();
         int numCocinas = (int) casa.getCocinas().size();
@@ -268,6 +278,37 @@ public class BusquedaCasasService {
 
         // Obtener fotos
         detalle.setUrlsFotos(obtenerUrlsFotos(casa.getCodigoCasa()));
+
+        // Obtener valoraciones y calcular promedio
+        List<Valoracion> valoraciones = valoracionRepository.findByCasaRuralCodigoCasaOrderByFechaCreacionDesc(casa.getCodigoCasa());
+        List<ValoracionDTO> valoracionesDTO = new ArrayList<>();
+        if (valoraciones != null) {
+            valoracionesDTO = valoraciones.stream()
+                    .map(v -> {
+                        String email = cuentaRepository.findByClienteIdUsuario(v.getCliente().getIdUsuario())
+                                .map(co.edu.uniquindio.casasrurales.entities.Cuenta::getEmail)
+                                .orElse("cliente@correo.com");
+                        return new ValoracionDTO(
+                                v.getId(),
+                                email,
+                                v.getCalificacion(),
+                                v.getComentario(),
+                                v.getFechaCreacion()
+                        );
+                    })
+                    .collect(Collectors.toList());
+        }
+        detalle.setValoraciones(valoracionesDTO);
+
+        double promedio = 0.0;
+        if (valoraciones != null && !valoraciones.isEmpty()) {
+            promedio = valoraciones.stream()
+                    .mapToInt(Valoracion::getCalificacion)
+                    .average()
+                    .orElse(0.0);
+            promedio = Math.round(promedio * 10.0) / 10.0;
+        }
+        detalle.setPromedioCalificacion(promedio);
 
         return detalle;
     }

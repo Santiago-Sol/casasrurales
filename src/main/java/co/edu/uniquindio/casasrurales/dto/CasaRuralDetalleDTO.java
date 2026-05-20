@@ -24,6 +24,8 @@ public class CasaRuralDetalleDTO {
     private List<CocinaDetalleDTO> cocinas;
     private List<BanoDetalleDTO> banos;
     private List<String> urlsFotos;
+    private double promedioCalificacion;
+    private List<ValoracionDTO> valoraciones;
 
     public CasaRuralDetalleDTO() {
     }
@@ -164,5 +166,21 @@ public class CasaRuralDetalleDTO {
 
     public void setUrlsFotos(List<String> urlsFotos) {
         this.urlsFotos = urlsFotos;
+    }
+
+    public double getPromedioCalificacion() {
+        return promedioCalificacion;
+    }
+
+    public void setPromedioCalificacion(double promedioCalificacion) {
+        this.promedioCalificacion = promedioCalificacion;
+    }
+
+    public List<ValoracionDTO> getValoraciones() {
+        return valoraciones;
+    }
+
+    public void setValoraciones(List<ValoracionDTO> valoraciones) {
+        this.valoraciones = valoraciones;
     }
 }

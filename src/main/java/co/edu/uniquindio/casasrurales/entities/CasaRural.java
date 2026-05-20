@@ -83,6 +83,9 @@ public class CasaRural {
     @OneToMany(mappedBy = "casaRural", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     private List<Reserva> reservas = new ArrayList<>();
 
+    @OneToMany(mappedBy = "casaRural", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Valoracion> valoraciones = new ArrayList<>();
+
     protected CasaRural() {
     }
 
@@ -292,6 +295,15 @@ public class CasaRural {
     public void agregarReserva(Reserva reserva) {
         reserva.setCasaRural(this);
         reservas.add(reserva);
+    }
+
+    public List<Valoracion> getValoraciones() {
+        return List.copyOf(valoraciones);
+    }
+
+    public void agregarValoracion(Valoracion valoracion) {
+        valoracion.setCasaRural(this);
+        valoraciones.add(valoracion);
     }
 
     public boolean esValida() {

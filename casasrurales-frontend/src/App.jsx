@@ -6,6 +6,7 @@ import RegistroCliente from './components/RegistroCliente'
 import BusquedaCasas from './components/BusquedaCasas'
 import DashboardPropietario from './components/DashboardPropietario'
 import MisReservasCliente from './components/MisReservasCliente'
+import FavoritosCliente from './components/FavoritosCliente'
 
 function App() {
   const [seccionActiva, setSeccionActiva] = useState('busqueda')
@@ -137,6 +138,17 @@ function App() {
       )
     }
 
+    if (seccionActiva === 'favoritos' && esCliente) {
+      return (
+        <main className="main-content">
+          <FavoritosCliente
+            usuarioAutenticado={usuarioAutenticado}
+            onRequireLogin={() => setSeccionActiva('login')}
+          />
+        </main>
+      )
+    }
+
     return <BusquedaCasas 
              usuarioAutenticado={usuarioAutenticado} 
              onRequireLogin={() => setSeccionActiva('login')} 
@@ -160,7 +172,6 @@ function App() {
                 <small>Armenia y Quindio</small>
               </span>
             </button>
-
             <div className="nav-actions">
               <button
                 className={seccionActiva === 'busqueda' ? 'nav-button active' : 'nav-button'}
@@ -177,12 +188,20 @@ function App() {
                 </button>
               )}
               {esCliente && (
-                <button
-                  className={seccionActiva === 'mis-reservas' ? 'nav-button active' : 'nav-button'}
-                  onClick={() => setSeccionActiva('mis-reservas')}
-                >
-                  Mis Reservas
-                </button>
+                <>
+                  <button
+                    className={seccionActiva === 'mis-reservas' ? 'nav-button active' : 'nav-button'}
+                    onClick={() => setSeccionActiva('mis-reservas')}
+                  >
+                    Mis Reservas
+                  </button>
+                  <button
+                    className={seccionActiva === 'favoritos' ? 'nav-button active' : 'nav-button'}
+                    onClick={() => setSeccionActiva('favoritos')}
+                  >
+                    Favoritos
+                  </button>
+                </>
               )}
               {usuarioAutenticado ? (
                 <button
