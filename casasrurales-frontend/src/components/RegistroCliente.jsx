@@ -12,7 +12,7 @@ export default function RegistroCliente({ onRegistroExitoso, onVolver }) {
 
   const handleChange = (e) => {
     const { name, value } = e.target
-    setFormulario(prev => ({
+    setFormulario((prev) => ({
       ...prev,
       [name]: value
     }))
@@ -35,19 +35,18 @@ export default function RegistroCliente({ onRegistroExitoso, onVolver }) {
       const data = await response.json()
 
       if (response.ok) {
-        setMensaje('✅ Registro exitoso. Redirigiendo...')
+        setMensaje('Registro exitoso. Redirigiendo...')
         setFormulario({
           email: '',
           telefono: '',
           password: ''
         })
-        // Redirigir inmediatamente sin delay
         onRegistroExitoso()
       } else {
-        setMensaje(`❌ ${data.error || 'Error en el registro'}`)
+        setMensaje(data.error || 'Error en el registro')
       }
     } catch (error) {
-      setMensaje(' Error de conexión con el servidor')
+      setMensaje('Error de conexion con el servidor')
       console.error(error)
     } finally {
       setCargando(false)
@@ -55,63 +54,65 @@ export default function RegistroCliente({ onRegistroExitoso, onVolver }) {
   }
 
   return (
-    <div className="formulario-container">
-      <div className="formulario-container-card">
+    <div className="formulario-container registro-page">
+      <div className="formulario-container-card registro-card registro-cliente-card">
         <h2>Registrarse como Cliente</h2>
-        <form onSubmit={handleSubmit} className="formulario" autoComplete="on">
-          {/* Campos ocultos para prevenir diálogo de autenticación del navegador */}
-          <input type="text" style={{display: 'none'}} autoComplete="username" value={formulario.email} onChange={() => {}} />
-          <input type="password" style={{display: 'none'}} autoComplete="current-password" onChange={() => {}} />
-          
-        <div className="form-group">
-          <label htmlFor="email">Email:</label>
-          <input
-            type="email"
-            id="email"
-            name="email"
-            value={formulario.email}
-            onChange={handleChange}
-            required
-          />
-        </div>
 
-        <div className="form-group">
-          <label htmlFor="telefono">Teléfono:</label>
-          <input
-            type="tel"
-            id="telefono"
-            name="telefono"
-            value={formulario.telefono}
-            onChange={handleChange}
-            required
-          />
-        </div>
+        <form onSubmit={handleSubmit} className="formulario registro-form registro-cliente-form" autoComplete="on">
+          <input type="text" style={{ display: 'none' }} autoComplete="username" value={formulario.email} onChange={() => {}} />
+          <input type="password" style={{ display: 'none' }} autoComplete="current-password" onChange={() => {}} />
 
-        <div className="form-group">
-          <label htmlFor="password">Contraseña:</label>
-          <input
-            type="password"
-            id="password"
-            name="password"
-            value={formulario.password}
-            onChange={handleChange}
-            autoComplete="off"
-            required
-          />
-        </div>
+          <div className="form-group">
+            <label htmlFor="email">Email</label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              value={formulario.email}
+              onChange={handleChange}
+              required
+            />
+          </div>
 
-        <button type="submit" disabled={cargando}>
-          {cargando ? 'Registrando...' : 'Registrar'}
-        </button>
+          <div className="form-group">
+            <label htmlFor="telefono">Telefono</label>
+            <input
+              type="tel"
+              id="telefono"
+              name="telefono"
+              value={formulario.telefono}
+              onChange={handleChange}
+              required
+            />
+          </div>
 
-        <button type="button" className="btn-volver" onClick={onVolver}>
-          ← Volver al Login
-        </button>
-      </form>
+          <div className="form-group">
+            <label htmlFor="password">Contrasena</label>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              value={formulario.password}
+              onChange={handleChange}
+              autoComplete="off"
+              required
+            />
+          </div>
 
-      {mensaje && <div className={`mensaje ${mensaje.includes('') ? 'exito' : 'error'}`}>
-        {mensaje}
-      </div>}
+          <button type="submit" disabled={cargando}>
+            {cargando ? 'Registrando...' : 'Registrar'}
+          </button>
+
+          <button type="button" className="btn-volver" onClick={onVolver}>
+            Volver al Login
+          </button>
+        </form>
+
+        {mensaje && (
+          <div className={`mensaje ${mensaje.includes('Registro exitoso') ? 'exito' : 'error'}`}>
+            {mensaje}
+          </div>
+        )}
       </div>
     </div>
   )

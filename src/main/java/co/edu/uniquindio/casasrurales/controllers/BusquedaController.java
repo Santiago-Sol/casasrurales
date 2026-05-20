@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 import co.edu.uniquindio.casasrurales.dto.CasaRuralDetalleDTO;
 import co.edu.uniquindio.casasrurales.dto.CasaRuralListadoDTO;
 import co.edu.uniquindio.casasrurales.dto.DisponibilidadCasaDTO;
+import co.edu.uniquindio.casasrurales.dto.ResultadoBusquedaCasasDTO;
 import co.edu.uniquindio.casasrurales.services.BusquedaCasasService;
 import co.edu.uniquindio.casasrurales.services.SistemaReservas;
 
@@ -47,12 +48,39 @@ public class BusquedaController {
      * Lista todas las casas disponibles y permite filtrar por poblacion, fechas y huespedes.
      */
     @GetMapping
-    public ResponseEntity<List<CasaRuralListadoDTO>> listarDisponibles(
+    public ResponseEntity<?> listarDisponibles(
             @RequestParam(required = false) String poblacion,
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") Date fechaEntrada,
             @RequestParam(required = false) Integer numeroNoches,
-            @RequestParam(required = false) Integer huespedes) {
+            @RequestParam(required = false) Integer huespedes,
+            @RequestParam(required = false) Integer habitaciones,
+            @RequestParam(required = false) Integer pagina,
+            @RequestParam(required = false) Integer tamano) {
 
+        if (pagina != null || tamano != null) {
+            ResultadoBusquedaCasasDTO resultado = busquedaCasasService.buscarCasasDisponiblesPaginadas(
+                    poblacion, fechaEntrada, numeroNoches, huespedes, habitaciones,
+                    pagina == null ? 0 : pagina,
+                    tamano == null ? 6 : tamano);
+
+            return ResponseEntity.ok(resultado);
+        }
+
+        List<CasaRuralListadoDTO> casas = busquedaCasasService.buscarCasasDisponibles(
+                poblacion, fechaEntrada, numeroNoches, huespedes);
+
+        if (casas.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+        }
+
+        return ResponseEntity.ok(casas);
+    }
+
+    public ResponseEntity<List<CasaRuralListadoDTO>> listarDisponibles(
+            String poblacion,
+            Date fechaEntrada,
+            Integer numeroNoches,
+            Integer huespedes) {
         List<CasaRuralListadoDTO> casas = busquedaCasasService.buscarCasasDisponibles(
                 poblacion, fechaEntrada, numeroNoches, huespedes);
 

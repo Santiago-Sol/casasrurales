@@ -15,6 +15,7 @@ import co.edu.uniquindio.casasrurales.dto.CasaRuralListadoDTO;
 import co.edu.uniquindio.casasrurales.dto.CocinaDetalleDTO;
 import co.edu.uniquindio.casasrurales.dto.DisponibilidadCasaDTO;
 import co.edu.uniquindio.casasrurales.dto.DisponibilidadDiaDTO;
+import co.edu.uniquindio.casasrurales.dto.ResultadoBusquedaCasasDTO;
 import co.edu.uniquindio.casasrurales.dto.HabitacionDetalleDTO;
 import co.edu.uniquindio.casasrurales.entities.Bano;
 import co.edu.uniquindio.casasrurales.entities.CasaRural;
@@ -84,9 +85,16 @@ public class BusquedaCasasService {
      */
     public List<CasaRuralListadoDTO> buscarCasasDisponibles(String poblacion, Date fechaEntrada,
                                                             Integer numeroNoches, Integer huespedes) {
+        return buscarCasasDisponibles(poblacion, fechaEntrada, numeroNoches, huespedes, null);
+    }
+
+    public List<CasaRuralListadoDTO> buscarCasasDisponibles(String poblacion, Date fechaEntrada,
+                                                            Integer numeroNoches, Integer huespedes,
+                                                            Integer habitaciones) {
         List<CasaRural> casas = casaRuralRepository.findByActivaTrue();
         String poblacionNormalizada = poblacion == null ? "" : poblacion.trim();
         int huespedesSolicitados = huespedes == null ? 0 : Math.max(0, huespedes);
+        int habitacionesMinimas = habitaciones == null ? 0 : Math.max(0, habitaciones);
         int nochesSolicitadas = numeroNoches == null ? 0 : numeroNoches;
         boolean filtrarPorFechas = fechaEntrada != null && nochesSolicitadas > 0;
 
@@ -94,11 +102,34 @@ public class BusquedaCasasService {
                 .filter(casa -> casa.getPaquetesAlquiler().stream().anyMatch(paquete -> paquete.isDisponible()))
                 .filter(casa -> poblacionNormalizada.isEmpty()
                         || casa.getPoblacion().equalsIgnoreCase(poblacionNormalizada))
+                .filter(casa -> habitacionesMinimas == 0 || casa.getHabitaciones().size() >= habitacionesMinimas)
                 .filter(casa -> huespedesSolicitados == 0 || capacidadHuespedes(casa) >= huespedesSolicitados)
                 .filter(casa -> !filtrarPorFechas
                         || estaDisponible(casa, fechaEntrada, nochesSolicitadas, huespedesSolicitados))
                 .map(this::convertirACasaListadoDTO)
                 .collect(Collectors.toList());
+    }
+
+    public ResultadoBusquedaCasasDTO buscarCasasDisponiblesPaginadas(String poblacion, Date fechaEntrada,
+                                                                     Integer numeroNoches, Integer huespedes,
+                                                                     Integer habitaciones, int pagina, int tamano) {
+        int paginaSegura = Math.max(0, pagina);
+        int tamanoSeguro = Math.max(1, Math.min(tamano, 24));
+        List<CasaRuralListadoDTO> casas = buscarCasasDisponibles(
+                poblacion, fechaEntrada, numeroNoches, huespedes, habitaciones);
+
+        int totalElementos = casas.size();
+        int totalPaginas = totalElementos == 0 ? 0 : (int) Math.ceil((double) totalElementos / tamanoSeguro);
+        int desde = Math.min(paginaSegura * tamanoSeguro, totalElementos);
+        int hasta = Math.min(desde + tamanoSeguro, totalElementos);
+
+        return new ResultadoBusquedaCasasDTO(
+                casas.subList(desde, hasta),
+                paginaSegura,
+                tamanoSeguro,
+                totalElementos,
+                totalPaginas
+        );
     }
 
     /**

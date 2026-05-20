@@ -10,6 +10,8 @@ const imagenesCasas = [
   'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=900&q=80'
 ]
 
+const TAMANO_PAGINA = 6
+
 export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin, onAuthExpired }) {
   const [termino, setTermino] = useState('')
   const [fechaEntrada, setFechaEntrada] = useState('')
@@ -21,15 +23,16 @@ export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin, onAu
   const [mensaje, setMensaje] = useState('')
   const [tipoMensaje, setTipoMensaje] = useState('info')
   const [casaReservando, setCasaReservando] = useState(null)
+  const [paginaActual, setPaginaActual] = useState(0)
+  const [totalPaginas, setTotalPaginas] = useState(1)
+  const [totalResultados, setTotalResultados] = useState(0)
 
   const casasOrdenadas = useMemo(
     () => {
-      const habitacionesMinimas = Number(habitaciones) || 0
       return [...resultados]
-        .filter((casa) => !habitacionesMinimas || casa.numDormitorios >= habitacionesMinimas)
         .sort((a, b) => a.nombrePropiedad.localeCompare(b.nombrePropiedad))
     },
-    [resultados, habitaciones]
+    [resultados]
   )
 
   useEffect(() => {
@@ -45,6 +48,32 @@ export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin, onAu
   const limpiarVista = () => {
     setResultados([])
     setDetalle(null)
+    setTotalResultados(0)
+    setTotalPaginas(1)
+  }
+
+  const filtrarHabitacionesEnCliente = (casas) => {
+    const habitacionesMinimas = Number(habitaciones) || 0
+    if (!habitacionesMinimas) return casas
+    return casas.filter((casa) => casa.numDormitorios >= habitacionesMinimas)
+  }
+
+  const aplicarResultadoBusqueda = (data, paginaSolicitada = 0) => {
+    if (Array.isArray(data)) {
+      const casas = filtrarHabitacionesEnCliente(data)
+      setResultados(casas)
+      setPaginaActual(0)
+      setTotalResultados(casas.length)
+      setTotalPaginas(1)
+      return casas
+    }
+
+    const casas = Array.isArray(data?.contenido) ? data.contenido : []
+    setResultados(casas)
+    setPaginaActual(Number.isInteger(data?.pagina) ? data.pagina : paginaSolicitada)
+    setTotalResultados(Number.isFinite(data?.totalElementos) ? data.totalElementos : casas.length)
+    setTotalPaginas(Math.max(1, Number.isFinite(data?.totalPaginas) ? data.totalPaginas : 1))
+    return casas
   }
 
   const calcularNoches = () => {
@@ -63,7 +92,7 @@ export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin, onAu
     return filtros.length ? filtros.join(' - ') : 'Todas las casas disponibles'
   }
 
-  const cargarCasasDisponibles = async (silencioso = false) => {
+  const cargarCasasDisponibles = async (silencioso = false, pagina = 0) => {
     const poblacionOCodigo = termino.trim()
     const esCodigo = /^\d+$/.test(poblacionOCodigo)
     const noches = calcularNoches()
@@ -84,7 +113,10 @@ export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin, onAu
 
     try {
       const params = new URLSearchParams()
+      params.set('pagina', String(pagina))
+      params.set('tamano', String(TAMANO_PAGINA))
       if (poblacionOCodigo) params.set('poblacion', poblacionOCodigo)
+      if (habitaciones) params.set('habitaciones', habitaciones)
       if (fechaEntrada && noches > 0) {
         params.set('fechaEntrada', fechaEntrada)
         params.set('numeroNoches', String(noches))
@@ -112,14 +144,18 @@ export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin, onAu
 
           if (fallbackResponse.ok) {
             const data = await fallbackResponse.json()
-            const casasDisponibles = fechaEntrada && noches > 0
+            const casasDisponiblesBase = fechaEntrada && noches > 0
               ? (await Promise.all(data.map(async (casa) => ({
                   casa,
                   disponible: await consultarDisponibilidadCasa(casa)
                 })))).filter(({ disponible }) => disponible).map(({ casa }) => casa)
               : data
+            const casasDisponibles = filtrarHabitacionesEnCliente(casasDisponiblesBase)
 
             setResultados(casasDisponibles)
+            setPaginaActual(0)
+            setTotalResultados(casasDisponibles.length)
+            setTotalPaginas(1)
             if (!silencioso) {
               mostrarMensaje(`${casasDisponibles.length} casas rurales encontradas`, 'exito')
             }
@@ -132,9 +168,10 @@ export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin, onAu
       }
 
       const data = await response.json()
-      setResultados(data)
+      const casas = aplicarResultadoBusqueda(data, pagina)
       if (!silencioso) {
-        mostrarMensaje(`${data.length} casas rurales encontradas`, 'exito')
+        const total = Array.isArray(data) ? casas.length : (Number.isFinite(data?.totalElementos) ? data.totalElementos : casas.length)
+        mostrarMensaje(`${total} casas rurales encontradas`, 'exito')
       }
     } catch (error) {
       mostrarMensaje('Error de conexion con el servidor', 'error')
@@ -144,13 +181,17 @@ export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin, onAu
     }
   }
 
-  const cargarTodasLasCasas = async () => {
+  const cargarTodasLasCasas = async (pagina = 0) => {
     setCargando(true)
     setMensaje('')
     limpiarVista()
 
     try {
-      const response = await fetch('/api/busqueda', { credentials: 'include' })
+      const params = new URLSearchParams({
+        pagina: String(pagina),
+        tamano: String(TAMANO_PAGINA)
+      })
+      const response = await fetch(`/api/busqueda?${params.toString()}`, { credentials: 'include' })
 
       if (response.status === 204) {
         mostrarMensaje('No hay casas disponibles por ahora', 'info')
@@ -168,7 +209,7 @@ export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin, onAu
       }
 
       const data = await response.json()
-      setResultados(data)
+      aplicarResultadoBusqueda(data, pagina)
     } catch (error) {
       mostrarMensaje('Error de conexion con el servidor', 'error')
       console.error(error)
@@ -247,18 +288,24 @@ export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin, onAu
 
     if (!cumpleHabitaciones || !cumpleDisponibilidad) {
       setResultados([])
+      setTotalResultados(0)
+      setTotalPaginas(1)
+      setPaginaActual(0)
       mostrarMensaje('La casa existe, pero no cumple los filtros seleccionados', 'info')
       return
     }
 
     setResultados([casa])
+    setTotalResultados(1)
+    setTotalPaginas(1)
+    setPaginaActual(0)
     setDetalle(null)
     mostrarMensaje('Casa encontrada', 'exito')
   }
 
   const handleBuscar = (event) => {
     event?.preventDefault()
-    cargarCasasDisponibles()
+    cargarCasasDisponibles(false, 0)
   }
 
   const limpiarFiltros = () => {
@@ -267,7 +314,17 @@ export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin, onAu
     setFechaSalida('')
     setHabitaciones('')
     setMensaje('')
-    cargarTodasLasCasas()
+    cargarTodasLasCasas(0)
+  }
+
+  const irAPagina = (pagina) => {
+    const paginaSegura = Math.max(0, Math.min(pagina, totalPaginas - 1))
+    if (paginaSegura === paginaActual || cargando) return
+    if (termino.trim() || fechaEntrada || fechaSalida || habitaciones) {
+      cargarCasasDisponibles(true, paginaSegura)
+    } else {
+      cargarTodasLasCasas(paginaSegura)
+    }
   }
 
   const imagenCasa = (casa, index = 0) => {
@@ -351,7 +408,7 @@ export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin, onAu
           {mensaje && <div className={`mensaje ${tipoMensaje}`}>{mensaje}</div>}
 
           <div className="results-toolbar">
-            <h2>{casasOrdenadas.length || 0} casas disponibles</h2>
+            <h2>{totalResultados || 0} casas disponibles</h2>
             <select aria-label="Ordenar resultados">
               <option>Ordenar por recomendadas</option>
               <option>Nombre A-Z</option>
@@ -366,13 +423,16 @@ export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin, onAu
                   <img src={imagenCasa(casa, index)} alt={casa.nombrePropiedad} />
                   <span className="badge">Disponible</span>
                   <span className="badge badge-yellow">Rural</span>
+                  <span className="preview-meta">
+                    <span>{casa.poblacion}</span>
+                    <span>Codigo {casa.codigoCasa}</span>
+                  </span>
                 </button>
                 <div className="property-body">
                   <p className="location">{casa.poblacion}</p>
                   <h3>{casa.nombrePropiedad}</h3>
                   <p className="description">{casa.descripcionGeneral || 'Casa rural lista para una estadia tranquila.'}</p>
                   <div className="spec-row">
-                    <span>Codigo {casa.codigoCasa}</span>
                     <span>{casa.numDormitorios} hab.</span>
                     <span>{casa.numBanos} banos</span>
                     <span>{casa.numCocinas} cocina</span>
@@ -384,6 +444,20 @@ export default function BusquedaCasas({ usuarioAutenticado, onRequireLogin, onAu
               </article>
             ))}
           </div>
+
+          {totalPaginas > 1 && (
+            <div className="pagination-bar">
+              <button type="button" onClick={() => irAPagina(paginaActual - 1)} disabled={paginaActual === 0 || cargando}>
+                Anterior
+              </button>
+              <span>
+                Pagina {paginaActual + 1} de {totalPaginas} · {totalResultados} casas
+              </span>
+              <button type="button" onClick={() => irAPagina(paginaActual + 1)} disabled={paginaActual >= totalPaginas - 1 || cargando}>
+                Siguiente
+              </button>
+            </div>
+          )}
         </section>
       </section>
 

@@ -101,7 +101,7 @@ function App() {
 
     if (seccionActiva === 'registro-propietario') {
       return (
-        <main className="main-content main-content-form">
+        <main className="main-content main-content-form registro-main">
           <RegistroPropietario
             onRegistroExitoso={handleRegistroExitoso}
             onVolver={() => setSeccionActiva('login')}
@@ -112,7 +112,7 @@ function App() {
 
     if (seccionActiva === 'registro-cliente') {
       return (
-        <main className="main-content main-content-form">
+        <main className="main-content main-content-form registro-main">
           <RegistroCliente
             onRegistroExitoso={handleRegistroExitoso}
             onVolver={() => setSeccionActiva('login')}
